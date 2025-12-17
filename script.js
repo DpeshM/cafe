@@ -12,8 +12,9 @@ const state = {
     completedTransactions: [],
     expenses: [],
     googleSheetsConfig: {
-        sheetId: '',
-        apiKey: '',
+        sheetId: '1Bom7bQ3g3XS9-VHb2iEPnexwo4-87TKDehu0g7RViEg',
+        scriptUrl: 'https://script.google.com/macros/s/AKfycbzV9Sx5vY52ZR07RFQbL6lnRUOMosUbxBE1plpQsw7oOoEKV7LNiciQ-wVC8bibD_25_Q/exec',
+        apiKey: 'AIzaSyC106AewYLjiJ20vunHUmzaLnUxLtDzyCA',
         sheetNames: {
             tables: 'Tables',
             menu: 'Menu',
@@ -457,6 +458,9 @@ async function loadAllData() {
 
 // Load data from Google Sheets
 async function loadFromGoogleSheets(sheetName) {
+    if (state.googleSheetsConfig.scriptUrl && state.googleSheetsConfig.scriptUrl.trim() !== '') {
+        return await loadFromAppsScript(sheetName);
+    }
     const { sheetId, apiKey } = state.googleSheetsConfig;
     
     if (!sheetId || !apiKey) {
@@ -505,6 +509,9 @@ async function loadFromGoogleSheets(sheetName) {
 
 // Save data to Google Sheets
 async function saveToGoogleSheets(sheetName, data) {
+    if (state.googleSheetsConfig.scriptUrl && state.googleSheetsConfig.scriptUrl.trim() !== '') {
+        return await saveToAppsScript(sheetName, data);
+    }
     const { sheetId, apiKey } = state.googleSheetsConfig;
     
     if (!sheetId || !apiKey) {
@@ -607,6 +614,123 @@ async function saveToGoogleSheets(sheetName, data) {
     return true;
 }
 
+function useAppsScript() {
+    return state.googleSheetsConfig.scriptUrl && state.googleSheetsConfig.scriptUrl.trim() !== '';
+}
+
+async function loadFromAppsScript(sheetName) {
+    const url = `${state.googleSheetsConfig.scriptUrl}?action=get&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
+    const response = await fetch(url, {
+        headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        }
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to load ${sheetName}: ${response.status}`);
+    }
+    const data = await response.json();
+    if (Array.isArray(data)) {
+        if (data.length === 0) return [];
+        const headers = data[0];
+        const rows = data.slice(1);
+        return rows.map(row => {
+            const obj = {};
+            headers.forEach((header, index) => {
+                obj[header] = row[index] || '';
+            });
+            return obj;
+        });
+    }
+    if (data && data.values && Array.isArray(data.values)) {
+        if (data.values.length === 0) return [];
+        const headers = data.values[0];
+        const rows = data.values.slice(1);
+        return rows.map(row => {
+            const obj = {};
+            headers.forEach((header, index) => {
+                obj[header] = row[index] || '';
+            });
+            return obj;
+        });
+    }
+    return [];
+}
+
+async function saveToAppsScript(sheetName, data) {
+    let headers = [];
+    let values = [];
+    if (sheetName === state.googleSheetsConfig.sheetNames.tables) {
+        headers = ['ID', 'Number', 'Status', 'Orders'];
+        values = data.map(table => [
+            table.id,
+            table.number,
+            table.status,
+            JSON.stringify(table.orders)
+        ]);
+    } else if (sheetName === state.googleSheetsConfig.sheetNames.menu) {
+        headers = ['ID', 'Name', 'Price', 'Category'];
+        values = data.map(item => [
+            item.id,
+            item.name,
+            item.price,
+            item.category
+        ]);
+    } else if (sheetName === state.googleSheetsConfig.sheetNames.orders) {
+        headers = ['ID', 'TableNumber', 'Items', 'Status', 'Timestamp'];
+        values = data.filter(order => order.status !== 'completed').map(order => [
+            order.id,
+            order.tableNumber,
+            JSON.stringify(order.items),
+            order.status,
+            order.timestamp || new Date().toLocaleTimeString()
+        ]);
+    } else if (sheetName === state.googleSheetsConfig.sheetNames.transactions) {
+        headers = ['ID', 'TableNumber', 'Items', 'Total', 'PaymentMethod', 'CashAmount', 'QRAmount', 'Timestamp', 'Date'];
+        values = data.map(transaction => [
+            transaction.id || Date.now(),
+            transaction.tableNumber,
+            JSON.stringify(transaction.items),
+            transaction.total,
+            transaction.paymentMethod,
+            transaction.cashAmount,
+            transaction.qrAmount,
+            transaction.timestamp,
+            transaction.date
+        ]);
+    } else if (sheetName === state.googleSheetsConfig.sheetNames.expenses) {
+        headers = ['ID', 'Description', 'Amount', 'Category', 'Timestamp', 'Date'];
+        values = data.map(expense => [
+            expense.id,
+            expense.description,
+            expense.amount,
+            expense.category,
+            expense.timestamp,
+            expense.date
+        ]);
+    }
+    const payload = {
+        action: 'set',
+        sheet: sheetName,
+        headers,
+        rows: values
+    };
+    const response = await fetch(state.googleSheetsConfig.scriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+        let message = `Failed to save to ${sheetName}: ${response.status}`;
+        try {
+            const err = await response.json();
+            if (err && err.message) message = err.message;
+        } catch {}
+        throw new Error(message);
+    }
+    return true;
+}
 // Sync all data to Google Sheets
 async function syncAllData() {
     if (state.isSyncing) return;
@@ -815,15 +939,17 @@ async function testConnection() {
 // Save settings
 function saveSettings() {
     const sheetId = elements.sheetId.value.trim();
+    const scriptUrl = elements.scriptUrl.value.trim();
     const apiKey = elements.apiKey.value.trim();
     
-    if (!sheetId || !apiKey) {
-        alert('Please enter Sheet ID and API Key');
+    if (!sheetId || (!apiKey && !scriptUrl)) {
+        alert('Please enter Sheet ID and either API Key or Apps Script URL');
         return;
     }
     
     state.googleSheetsConfig = {
         sheetId,
+        scriptUrl,
         apiKey,
         sheetNames: {
             tables: elements.tablesSheet.value || 'Tables',
@@ -1017,6 +1143,7 @@ function setupEventListeners() {
 function openSettingsModal() {
     // Load current settings
     elements.sheetId.value = state.googleSheetsConfig.sheetId || '';
+    elements.scriptUrl.value = state.googleSheetsConfig.scriptUrl || '';
     elements.apiKey.value = state.googleSheetsConfig.apiKey || '';
     elements.tablesSheet.value = state.googleSheetsConfig.sheetNames.tables || 'Tables';
     elements.menuSheet.value = state.googleSheetsConfig.sheetNames.menu || 'Menu';
