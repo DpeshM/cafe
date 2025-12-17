@@ -191,120 +191,44 @@
     </main>
     
     <!-- Settings Modal -->
-    <div class="modal-overlay" id="settingsModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h2 class="modal-title">Google Sheets Settings</h2>
-                <button class="modal-close" id="closeSettingsBtn">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-content">
-                <div class="settings-tabs">
-                    <button class="settings-tab active" data-settings-tab="setup">Setup</button>
-                    <button class="settings-tab" data-settings-tab="tables">Tables</button>
-                    <button class="settings-tab" data-settings-tab="menu">Menu</button>
-                </div>
-                
-                <div class="settings-section active" id="setupSettings">
-                    <h3 class="category-title mb-3">Google Sheets Configuration</h3>
-                    <div class="form-group">
-                        <label class="form-label">Google Sheet ID</label>
-                        <input type="text" class="form-input" id="sheetId" placeholder="Enter your Google Sheet ID">
-                        <small class="form-help">Get this from your Google Sheet URL: https://docs.google.com/spreadsheets/d/[THIS_IS_YOUR_SHEET_ID]/edit</small>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">API Key</label>
-                        <input type="text" class="form-input" id="apiKey" placeholder="Enter your Google Sheets API Key">
-                        <small class="form-help">Get this from Google Cloud Console</small>
-                    </div>
-                    <div class="form-group">
-                    <label class="form-label">Google Apps Script URL (Recommended)</label>
-                    <input type="text" class="form-input" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec">
-                    <small class="form-help">Easier setup than Sheets API. Get this from Apps Script deployment.</small>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Sheet Names</label>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <input type="text" class="form-input" id="tablesSheet" placeholder="Tables" value="Tables">
-                            </div>
-                            <div class="form-group">
-                                <input type="text" class="form-input" id="menuSheet" placeholder="Menu" value="Menu">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <input type="text" class="form-input" id="ordersSheet" placeholder="Orders" value="Orders">
-                            </div>
-                            <div class="form-group">
-                                <input type="text" class="form-input" id="transactionsSheet" placeholder="Transactions" value="Transactions">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <input type="text" class="form-input" id="expensesSheet" placeholder="Expenses" value="Expenses">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="alert alert-info mb-4">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>Instructions:</strong>
-                        <ol class="mt-2">
-                            <li>Create a Google Sheet with the above sheet names</li>
-                            <li>Enable Google Sheets API in Google Cloud Console</li>
-                            <li>Create an API key with Sheets API access</li>
-                            <li>Share your Google Sheet with "Anyone with the link can view"</li>
-                            <li>Click "Test Connection" to verify setup</li>
-                        </ol>
-                    </div>
-                    
-                    <div class="text-center">
-                        <button class="action-btn btn-primary" id="testConnectionBtn">
-                            <i class="fas fa-plug"></i>
-                            Test Connection
-                        </button>
-                        <button class="action-btn btn-success" id="saveSettingsBtn">
-                            <i class="fas fa-save"></i>
-                            Save Settings
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="settings-section" id="tablesSettings">
-                    <h3 class="category-title mb-3">Table Management</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Add New Table</label>
-                            <input type="number" min="1" class="form-input" id="newTableNumber" placeholder="Table Number">
-                        </div>
-                        <div class="form-group" style="align-self: flex-end;">
-                            <button class="action-btn btn-primary" id="addTableBtn">Add Table</button>
-                        </div>
-                    </div>
-                    
-                    <div class="tables-grid mt-4" id="manageTablesGrid">
-                        <!-- Tables for management will be rendered here -->
-                    </div>
-                </div>
-                
-                <div class="settings-section" id="menuSettings">
-                    <h3 class="category-title mb-3">Menu Management</h3>
-                    <div class="text-center mb-4">
-                        <button class="nav-btn" id="addMenuItemBtn">
-                            <i class="fas fa-plus"></i>
-                            <span>Add Menu Item</span>
-                        </button>
-                    </div>
-                    
-                    <div id="manageMenuItems">
-                        <!-- Menu items for management will be rendered here -->
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="settings-section active" id="setupSettings">
+    <h3 class="category-title mb-3">Google Apps Script Setup</h3>
+    
+    <div class="alert alert-info mb-4">
+        <i class="fas fa-info-circle"></i>
+        <strong>No API Key Needed! Follow these steps:</strong>
+        <ol class="mt-2">
+            <li>Create a Google Sheet</li>
+            <li>Copy the Sheet ID from URL</li>
+            <li>Create Google Apps Script (code provided)</li>
+            <li>Deploy as Web App (Anyone can access)</li>
+            <li>Paste the Web App URL below</li>
+        </ol>
     </div>
+    
+    <div class="form-group">
+        <label class="form-label">Google Sheet ID</label>
+        <input type="text" class="form-input" id="sheetId" placeholder="Enter your Google Sheet ID">
+        <small class="form-help">From URL: docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit</small>
+    </div>
+    
+    <div class="form-group">
+        <label class="form-label">Google Apps Script URL</label>
+        <input type="text" class="form-input" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec">
+        <small class="form-help">Get this from Apps Script deployment</small>
+    </div>
+    
+    <div class="text-center">
+        <button class="action-btn btn-primary" id="testConnectionBtn">
+            <i class="fas fa-plug"></i>
+            Test Connection
+        </button>
+        <button class="action-btn btn-success" id="saveSettingsBtn">
+            <i class="fas fa-save"></i>
+            Save Settings
+        </button>
+    </div>
+</div>
     
     <!-- Add Expense Modal -->
     <div class="modal-overlay" id="expenseModal">

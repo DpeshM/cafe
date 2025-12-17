@@ -24,8 +24,7 @@ const state = {
         connected: false,
         lastSync: null
     },
-    isSyncing: false,
-    editingMenuItem: null
+    isSyncing: false
 };
 
 // DOM Elements
@@ -59,6 +58,7 @@ const elements = {
     
     // Settings inputs
     sheetId: document.getElementById('sheetId'),
+    scriptUrl: document.getElementById('scriptUrl'),
     apiKey: document.getElementById('apiKey'),
     tablesSheet: document.getElementById('tablesSheet'),
     menuSheet: document.getElementById('menuSheet'),
@@ -80,7 +80,24 @@ const elements = {
     qrAmount: document.getElementById('qrAmount'),
     paymentTotal: document.getElementById('paymentTotal'),
     cashSection: document.getElementById('cashSection'),
-    qrSection: document.getElementById('qrSection')
+    qrSection: document.getElementById('qrSection'),
+    
+    // Buttons
+    settingsBtn: document.getElementById('settingsBtn'),
+    closeSettingsBtn: document.getElementById('closeSettingsBtn'),
+    testConnectionBtn: document.getElementById('testConnectionBtn'),
+    saveSettingsBtn: document.getElementById('saveSettingsBtn'),
+    addTableBtn: document.getElementById('addTableBtn'),
+    addMenuItemBtn: document.getElementById('addMenuItemBtn'),
+    saveMenuItemBtn: document.getElementById('saveMenuItemBtn'),
+    closeMenuItemBtn: document.getElementById('closeMenuItemBtn'),
+    saveExpenseBtn: document.getElementById('saveExpenseBtn'),
+    closeExpenseBtn: document.getElementById('closeExpenseBtn'),
+    addExpenseBtn: document.getElementById('addExpenseBtn'),
+    clearOrderBtn: document.getElementById('clearOrderBtn'),
+    submitOrderBtn: document.getElementById('submitOrderBtn'),
+    processPaymentBtn: document.getElementById('processPaymentBtn'),
+    closePaymentBtn: document.getElementById('closePaymentBtn')
 };
 
 // Initialize the application
@@ -94,116 +111,24 @@ function loadConfig() {
     try {
         const config = localStorage.getItem('restaurant_sheets_config');
         if (config) {
-            state.googleSheetsConfig = JSON.parse(config);
+            const parsed = JSON.parse(config);
+            state.googleSheetsConfig = parsed;
+            
             if (state.googleSheetsConfig.sheetId && state.googleSheetsConfig.apiKey) {
                 loadAllData();
             } else {
                 elements.loadingScreen.style.display = 'none';
-                openSettingsModal();
+                setTimeout(() => openSettingsModal(), 500);
             }
         } else {
             elements.loadingScreen.style.display = 'none';
-            openSettingsModal();
+            setTimeout(() => openSettingsModal(), 500);
         }
     } catch (error) {
         console.error('Error loading config:', error);
         elements.loadingScreen.style.display = 'none';
-        openSettingsModal();
+        setTimeout(() => openSettingsModal(), 500);
     }
-}
-
-// Setup event listeners
-function setupEventListeners() {
-    // Navigation tabs
-    document.querySelectorAll('.nav-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            const tabId = tab.getAttribute('data-tab');
-            switchTab(tabId);
-        });
-    });
-    
-    // Settings tabs
-    document.querySelectorAll('.settings-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            const tabId = tab.getAttribute('data-settings-tab');
-            switchSettingsTab(tabId);
-        });
-    });
-    
-    // Settings button
-    document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
-    
-    // Close settings button
-    document.getElementById('closeSettingsBtn').addEventListener('click', () => {
-        closeModal('settingsModal');
-    });
-    
-    // Sync button
-    document.getElementById('syncBtn').addEventListener('click', syncAllData);
-    
-    // Test connection button
-    document.getElementById('testConnectionBtn').addEventListener('click', testConnection);
-    
-    // Save settings button
-    document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
-    
-    // Add table button
-    document.getElementById('addTableBtn').addEventListener('click', addTable);
-    
-    // Add menu item button
-    document.getElementById('addMenuItemBtn').addEventListener('click', () => {
-        openAddMenuItemModal();
-    });
-    
-    // Save menu item button
-    document.getElementById('saveMenuItemBtn').addEventListener('click', saveMenuItem);
-    
-    // Close menu item modal
-    document.getElementById('closeMenuItemBtn').addEventListener('click', () => {
-        closeModal('menuItemModal');
-    });
-    
-    // Save expense button
-    document.getElementById('saveExpenseBtn').addEventListener('click', addExpense);
-    
-    // Close expense modal
-    document.getElementById('closeExpenseBtn').addEventListener('click', () => {
-        closeModal('expenseModal');
-    });
-    
-    // Add expense button
-    document.getElementById('addExpenseBtn').addEventListener('click', () => {
-        openAddExpenseModal();
-    });
-    
-    // Download button
-    document.getElementById('downloadBtn').addEventListener('click', downloadExcel);
-    
-    // Clear order button
-    document.getElementById('clearOrderBtn').addEventListener('click', clearOrder);
-    
-    // Submit order button
-    document.getElementById('submitOrderBtn').addEventListener('click', submitOrder);
-    
-    // Payment method change
-    document.getElementById('paymentMethod').addEventListener('change', updatePaymentSections);
-    
-    // Process payment button
-    document.getElementById('processPaymentBtn').addEventListener('click', processPayment);
-    
-    // Close payment modal
-    document.getElementById('closePaymentBtn').addEventListener('click', () => {
-        closeModal('paymentModal');
-    });
-    
-    // Click outside modal to close
-    document.querySelectorAll('.modal-overlay').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.classList.remove('active');
-            }
-        });
-    });
 }
 
 // Load all data from Google Sheets
@@ -214,7 +139,7 @@ async function loadAllData() {
         // Load tables
         const tablesData = await loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.tables);
         state.tables = tablesData.length > 0 ? tablesData.map(row => ({
-            id: row.id || parseInt(row.Number),
+            id: row.ID || row.id || parseInt(row.Number),
             number: parseInt(row.Number),
             status: row.Status || 'vacant',
             orders: row.Orders ? JSON.parse(row.Orders) : []
@@ -223,44 +148,44 @@ async function loadAllData() {
         // Load menu items
         const menuData = await loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.menu);
         state.menuItems = menuData.length > 0 ? menuData.map(row => ({
-            id: row.id || parseInt(row.ID),
-            name: row.Name,
-            price: parseFloat(row.Price),
-            category: row.Category
+            id: row.ID || row.id || parseInt(row.ID || row.id),
+            name: row.Name || row.name,
+            price: parseFloat(row.Price || row.price),
+            category: row.Category || row.category
         })) : getDefaultMenu();
         
         // Load kitchen orders
         const ordersData = await loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.orders);
         state.kitchenOrders = ordersData.map(row => ({
-            id: row.id || parseInt(row.ID),
-            tableNumber: parseInt(row.TableNumber),
-            items: JSON.parse(row.Items),
-            status: row.Status,
-            timestamp: row.Timestamp
+            id: row.ID || row.id || parseInt(row.ID || row.id),
+            tableNumber: parseInt(row.TableNumber || row.tableNumber),
+            items: row.Items ? JSON.parse(row.Items || row.items) : [],
+            status: row.Status || row.status,
+            timestamp: row.Timestamp || row.timestamp
         })).filter(order => order.status !== 'completed');
         
         // Load transactions
         const transactionsData = await loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.transactions);
         state.completedTransactions = transactionsData.map(row => ({
-            tableNumber: parseInt(row.TableNumber),
-            items: JSON.parse(row.Items),
-            total: parseFloat(row.Total),
-            paymentMethod: row.PaymentMethod,
-            cashAmount: parseFloat(row.CashAmount),
-            qrAmount: parseFloat(row.QRAmount),
-            timestamp: row.Timestamp,
-            date: row.Date
+            tableNumber: parseInt(row.TableNumber || row.tableNumber),
+            items: row.Items ? JSON.parse(row.Items || row.items) : [],
+            total: parseFloat(row.Total || row.total),
+            paymentMethod: row.PaymentMethod || row.paymentMethod,
+            cashAmount: parseFloat(row.CashAmount || row.cashAmount || 0),
+            qrAmount: parseFloat(row.QRAmount || row.qrAmount || 0),
+            timestamp: row.Timestamp || row.timestamp,
+            date: row.Date || row.date
         }));
         
         // Load expenses
         const expensesData = await loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.expenses);
         state.expenses = expensesData.map(row => ({
-            id: row.id || parseInt(row.ID),
-            description: row.Description,
-            amount: parseFloat(row.Amount),
-            category: row.Category,
-            timestamp: row.Timestamp,
-            date: row.Date
+            id: row.ID || row.id || parseInt(row.ID || row.id),
+            description: row.Description || row.description,
+            amount: parseFloat(row.Amount || row.amount),
+            category: row.Category || row.category,
+            timestamp: row.Timestamp || row.timestamp,
+            date: row.Date || row.date
         }));
         
         state.googleSheetsConfig.connected = true;
@@ -282,19 +207,27 @@ async function loadAllData() {
 }
 
 // Load data from Google Sheets
-async function loadFromGoogleSheets(sheetName) {
+async function loadFromGoogleSheets(sheetName, useCache = false) {
     const { sheetId, apiKey } = state.googleSheetsConfig;
     
     if (!sheetId || !apiKey) {
         throw new Error('Google Sheets configuration missing');
     }
     
-    const url = `${GOOGLE_SHEETS_API}/${sheetId}/values/${sheetName}?key=${apiKey}`;
+    // Add cache buster to prevent browser caching
+    const cacheBuster = useCache ? '' : `&t=${Date.now()}`;
+    const url = `${GOOGLE_SHEETS_API}/${sheetId}/values/${sheetName}?key=${apiKey}${cacheBuster}`;
     
-    const response = await fetch(url);
+    const response = await fetch(url, {
+        headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        }
+    });
     
     if (!response.ok) {
-        throw new Error(`Failed to load ${sheetName}`);
+        throw new Error(`Failed to load ${sheetName}: ${response.status}`);
     }
     
     const data = await response.json();
@@ -302,6 +235,19 @@ async function loadFromGoogleSheets(sheetName) {
     if (!data.values || data.values.length === 0) {
         return [];
     }
+    
+    // Convert array of arrays to array of objects
+    const headers = data.values[0];
+    const rows = data.values.slice(1);
+    
+    return rows.map(row => {
+        const obj = {};
+        headers.forEach((header, index) => {
+            obj[header] = row[index] || '';
+        });
+        return obj;
+    });
+
     
     // Convert array of arrays to array of objects
     const headers = data.values[0];
@@ -324,44 +270,38 @@ async function saveToGoogleSheets(sheetName, data) {
         throw new Error('Google Sheets configuration missing');
     }
     
-    // First, get existing data to determine next ID
-    const existingData = await loadFromGoogleSheets(sheetName);
-    const nextId = existingData.length > 0 ? 
-        Math.max(...existingData.map(row => parseInt(row.id) || parseInt(row.ID) || 0)) + 1 : 1;
-    
-    // Prepare data for Google Sheets
+    // Prepare headers based on sheet type
+    let headers = [];
     let values = [];
     
     if (sheetName === state.googleSheetsConfig.sheetNames.tables) {
-        // Tables data
+        headers = ['ID', 'Number', 'Status', 'Orders'];
         values = data.map(table => [
-            nextId + table.id - 1,
+            table.id,
             table.number,
             table.status,
             JSON.stringify(table.orders)
         ]);
     } else if (sheetName === state.googleSheetsConfig.sheetNames.menu) {
-        // Menu data
+        headers = ['ID', 'Name', 'Price', 'Category'];
         values = data.map(item => [
-            nextId + item.id - 1,
+            item.id,
             item.name,
             item.price,
             item.category
         ]);
     } else if (sheetName === state.googleSheetsConfig.sheetNames.orders) {
-        // Orders data - only save pending orders
-        const pendingOrders = data.filter(order => order.status !== 'completed');
-        values = pendingOrders.map(order => [
-            nextId + order.id - 1,
+        headers = ['ID', 'TableNumber', 'Items', 'Status', 'Timestamp'];
+        values = data.filter(order => order.status !== 'completed').map(order => [
+            order.id,
             order.tableNumber,
             JSON.stringify(order.items),
             order.status,
             order.timestamp
         ]);
     } else if (sheetName === state.googleSheetsConfig.sheetNames.transactions) {
-        // Transactions data
+        headers = ['TableNumber', 'Items', 'Total', 'PaymentMethod', 'CashAmount', 'QRAmount', 'Timestamp', 'Date'];
         values = data.map(transaction => [
-            nextId,
             transaction.tableNumber,
             JSON.stringify(transaction.items),
             transaction.total,
@@ -372,9 +312,9 @@ async function saveToGoogleSheets(sheetName, data) {
             transaction.date
         ]);
     } else if (sheetName === state.googleSheetsConfig.sheetNames.expenses) {
-        // Expenses data
+        headers = ['ID', 'Description', 'Amount', 'Category', 'Timestamp', 'Date'];
         values = data.map(expense => [
-            nextId + expense.id - 1,
+            expense.id,
             expense.description,
             expense.amount,
             expense.category,
@@ -383,41 +323,24 @@ async function saveToGoogleSheets(sheetName, data) {
         ]);
     }
     
-    // Clear existing data and write new data
-    const clearUrl = `${GOOGLE_SHEETS_API}/${sheetId}/values/${sheetName}:clear?key=${apiKey}`;
-    await fetch(clearUrl, { method: 'POST' });
+    // Clear existing data
+    const clearUrl = `${GOOGLE_SHEETS_API}/${sheetId}/values/${sheetName}!A:Z:clear?key=${apiKey}`;
+    await fetch(clearUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    });
     
-    // Write headers
-    let headers;
-    if (sheetName === state.googleSheetsConfig.sheetNames.tables) {
-        headers = [['ID', 'Number', 'Status', 'Orders']];
-    } else if (sheetName === state.googleSheetsConfig.sheetNames.menu) {
-        headers = [['ID', 'Name', 'Price', 'Category']];
-    } else if (sheetName === state.googleSheetsConfig.sheetNames.orders) {
-        headers = [['ID', 'TableNumber', 'Items', 'Status', 'Timestamp']];
-    } else if (sheetName === state.googleSheetsConfig.sheetNames.transactions) {
-        headers = [['ID', 'TableNumber', 'Items', 'Total', 'PaymentMethod', 'CashAmount', 'QRAmount', 'Timestamp', 'Date']];
-    } else if (sheetName === state.googleSheetsConfig.sheetNames.expenses) {
-        headers = [['ID', 'Description', 'Amount', 'Category', 'Timestamp', 'Date']];
-    }
+    // Write new data (headers + values)
+    const writeData = [headers, ...values];
+    const writeUrl = `${GOOGLE_SHEETS_API}/${sheetId}/values/${sheetName}!A1:append?valueInputOption=RAW&key=${apiKey}`;
     
-    const writeUrl = `${GOOGLE_SHEETS_API}/${sheetId}/values/${sheetName}:append?valueInputOption=RAW&key=${apiKey}`;
-    
-    // Write headers
     await fetch(writeUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ values: headers })
+        body: JSON.stringify({
+            values: writeData
+        })
     });
-    
-    // Write data if exists
-    if (values.length > 0) {
-        await fetch(writeUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ values })
-        });
-    }
 }
 
 // Sync all data to Google Sheets
@@ -486,68 +409,45 @@ function setSyncStatus(message, type = '') {
 }
 
 // Test Google Sheets connection
-// Test connection function
 async function testConnection() {
-  const sheetId = elements.sheetId.value.trim();
-  const apiKey = elements.apiKey.value.trim();
-  const scriptUrl = elements.scriptUrl ? elements.scriptUrl.value.trim() : '';
-  
-  if (!sheetId) {
-    alert('Please enter Sheet ID');
-    return;
-  }
-  
-  setSyncStatus('Testing connection...', 'connecting');
-  
-  try {
-    // Try Google Apps Script first
-    if (scriptUrl) {
-      const url = new URL(scriptUrl);
-      url.searchParams.set('method', 'GET');
-      url.searchParams.set('type', 'test');
-      url.searchParams.set('sheetId', sheetId);
-      
-      const response = await fetch(url.toString());
-      const result = await response.json();
-      
-      if (result.success) {
-        setSyncStatus('Apps Script: Connection successful!', 'connected');
-        alert('Connection to Google Apps Script successful!');
+    const sheetId = elements.sheetId.value.trim();
+    const apiKey = elements.apiKey.value.trim();
+    
+    if (!sheetId || !apiKey) {
+        alert('Please enter both Sheet ID and API Key');
         return;
-      }
     }
     
-    // Fallback to Google Sheets API
-    if (apiKey) {
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?key=${apiKey}`;
-      const response = await fetch(url);
-      
-      if (response.ok) {
-        setSyncStatus('Sheets API: Connection successful!', 'connected');
-        alert('Connection to Google Sheets API successful!');
-      } else {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'Connection failed');
-      }
-    } else {
-      throw new Error('Please enter either API Key or Apps Script URL');
-    }
-  } catch (error) {
-    console.error('Connection test error:', error);
+    setSyncStatus('Testing connection...', 'connecting');
     
-    // Provide specific error messages
-    let errorMessage = error.message;
-    if (errorMessage.includes('PERMISSION_DENIED')) {
-      errorMessage = 'Permission denied. Please share your Google Sheet with "Anyone with the link"';
-    } else if (errorMessage.includes('API key not valid')) {
-      errorMessage = 'API Key is invalid. Please check your Google Cloud Console settings';
-    } else if (errorMessage.includes('not found')) {
-      errorMessage = 'Sheet not found. Please check your Sheet ID';
+    try {
+        // Test by fetching sheet info
+        const url = `${GOOGLE_SHEETS_API}/${sheetId}?key=${apiKey}`;
+        const response = await fetch(url);
+        
+        if (response.ok) {
+            const data = await response.json();
+            setSyncStatus('Connection successful!', 'connected');
+            alert(`Successfully connected to: "${data.properties.title}"`);
+        } else {
+            const error = await response.json();
+            throw new Error(error.error?.message || 'Connection failed');
+        }
+    } catch (error) {
+        console.error('Connection test error:', error);
+        
+        let errorMessage = error.message;
+        if (errorMessage.includes('PERMISSION_DENIED')) {
+            errorMessage = 'Permission denied. Please:\n1. Share your Google Sheet with "Anyone with the link" as Viewer\n2. Or add the service account email to the sheet';
+        } else if (errorMessage.includes('API key not valid')) {
+            errorMessage = 'API Key is invalid. Please check your Google Cloud Console settings';
+        } else if (errorMessage.includes('not found')) {
+            errorMessage = 'Sheet not found. Please check your Sheet ID';
+        }
+        
+        setSyncStatus('Connection failed', 'error');
+        alert(`Connection failed: ${errorMessage}`);
     }
-    
-    setSyncStatus('Connection failed', 'error');
-    alert(`Connection failed: ${errorMessage}\n\nTroubleshooting:\n1. Share your Google Sheet publicly\n2. Enable Google Sheets API\n3. Check API Key restrictions`);
-  }
 }
 
 // Save settings
@@ -632,6 +532,7 @@ function openAddMenuItemModal() {
     elements.menuItemCategory.value = 'Main';
     elements.menuItemModalTitle.textContent = 'Add Menu Item';
     elements.saveMenuItemBtn.textContent = 'Add Item';
+    elements.saveMenuItemBtn.removeAttribute('data-edit-id');
     elements.menuItemModal.classList.add('active');
 }
 
@@ -1704,7 +1605,7 @@ function downloadExcel() {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `restaurant_report_${new Date().toLocaleDateString()}.csv`);
+    link.setAttribute("download", `restaurant_report_${new Date().toLocaleDateString().replace(/\//g, '-')}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -1795,4 +1696,222 @@ function renderExpensesSummary() {
             `).join('')}
         </div>
     `;
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    // Navigation tabs
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabId = tab.getAttribute('data-tab');
+            switchTab(tabId);
+        });
+    });
+    
+    // Settings tabs
+    document.querySelectorAll('.settings-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabId = tab.getAttribute('data-settings-tab');
+            switchSettingsTab(tabId);
+        });
+    });
+    
+    // Settings button
+    elements.settingsBtn.addEventListener('click', openSettingsModal);
+    
+    // Close settings button
+    elements.closeSettingsBtn.addEventListener('click', () => {
+        closeModal('settingsModal');
+    });
+    
+    // Sync button
+    elements.syncBtn.addEventListener('click', syncAllData);
+    
+    // Test connection button
+    elements.testConnectionBtn.addEventListener('click', testConnection);
+    
+    // Save settings button
+    elements.saveSettingsBtn.addEventListener('click', saveSettings);
+    
+    // Add table button
+    elements.addTableBtn.addEventListener('click', addTable);
+    
+    // Add menu item button
+    elements.addMenuItemBtn.addEventListener('click', openAddMenuItemModal);
+    
+    // Save menu item button
+    elements.saveMenuItemBtn.addEventListener('click', saveMenuItem);
+    
+    // Close menu item modal
+    elements.closeMenuItemBtn.addEventListener('click', () => {
+        closeModal('menuItemModal');
+    });
+    
+    // Save expense button
+    elements.saveExpenseBtn.addEventListener('click', addExpense);
+    
+    // Close expense modal
+    elements.closeExpenseBtn.addEventListener('click', () => {
+        closeModal('expenseModal');
+    });
+    
+    // Add expense button
+    elements.addExpenseBtn.addEventListener('click', openAddExpenseModal);
+    
+    // Download button
+    elements.downloadBtn.addEventListener('click', downloadExcel);
+    
+    // Clear order button
+    elements.clearOrderBtn.addEventListener('click', clearOrder);
+    
+    // Submit order button
+    elements.submitOrderBtn.addEventListener('click', submitOrder);
+    
+    // Payment method change
+    elements.paymentMethod.addEventListener('change', updatePaymentSections);
+    
+    // Process payment button
+    elements.processPaymentBtn.addEventListener('click', processPayment);
+    
+    // Close payment modal
+    elements.closePaymentBtn.addEventListener('click', () => {
+        closeModal('paymentModal');
+    });
+    
+    // Click outside modal to close
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+    });
+
+    // Add to state object
+const state = {
+    // ... existing properties ...
+    syncInterval: null,
+    autoSyncEnabled: true,
+    syncIntervalMs: 30000, // 30 seconds
+    lastPullTime: null
+};
+
+// Add after loadAllData function
+function startAutoSync() {
+    if (state.syncInterval) {
+        clearInterval(state.syncInterval);
+    }
+    
+    if (state.autoSyncEnabled && state.googleSheetsConfig.connected) {
+        state.syncInterval = setInterval(async () => {
+            if (document.hidden) return; // Don't sync if tab is hidden
+            
+            try {
+                await pullFromGoogleSheets();
+                updateSyncIndicator();
+                console.log('Auto-sync completed');
+            } catch (error) {
+                console.error('Auto-sync failed:', error);
+            }
+        }, state.syncIntervalMs);
+        
+        // Initial indicator update
+        updateSyncIndicator();
+        console.log('Auto-sync started');
+    }
+}
+
+// Add new function to pull data without pushing
+async function pullFromGoogleSheets() {
+    if (!state.googleSheetsConfig.connected || state.isSyncing) return;
+    
+    try {
+        state.isSyncing = true;
+        
+        // Load tables
+        const tablesData = await loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.tables);
+        const newTables = tablesData.length > 0 ? tablesData.map(row => ({
+            id: row.ID || parseInt(row.Number),
+            number: parseInt(row.Number),
+            status: row.Status || 'vacant',
+            orders: row.Orders ? JSON.parse(row.Orders) : []
+        })) : state.tables;
+        
+        // Load kitchen orders
+        const ordersData = await loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.orders);
+        const newKitchenOrders = ordersData.map(row => ({
+            id: row.ID || parseInt(row.ID),
+            tableNumber: parseInt(row.TableNumber),
+            items: row.Items ? JSON.parse(row.Items) : [],
+            status: row.Status,
+            timestamp: row.Timestamp
+        })).filter(order => order.status !== 'completed');
+        
+        // Update state only if data has changed
+        let dataChanged = false;
+        
+        // Compare tables
+        if (JSON.stringify(newTables) !== JSON.stringify(state.tables)) {
+            state.tables = newTables;
+            dataChanged = true;
+        }
+        
+        // Compare kitchen orders
+        if (JSON.stringify(newKitchenOrders) !== JSON.stringify(state.kitchenOrders)) {
+            state.kitchenOrders = newKitchenOrders;
+            dataChanged = true;
+        }
+        
+        // Update last sync time
+        state.lastPullTime = new Date();
+        
+        // Only re-render if data changed
+        if (dataChanged) {
+            renderAll();
+            console.log('Data updated from Google Sheets');
+        }
+        
+    } catch (error) {
+        console.error('Pull error:', error);
+    } finally {
+        state.isSyncing = false;
+    }
+}
+
+// Update the saveSettings function to start auto-sync
+// Keep existing `saveSettings`, `syncAllData`, and `startAutoSync` definitions above.
+// The following helper functions provide a small sync indicator UI used by auto-sync.
+function updateSyncIndicator() {
+    const syncIndicator = document.getElementById('syncIndicator') || createSyncIndicator();
+    
+    if (state.googleSheetsConfig.connected && state.lastPullTime) {
+        const minutesAgo = Math.floor((new Date() - state.lastPullTime) / 60000);
+        if (minutesAgo < 1) {
+            syncIndicator.innerHTML = '<span style="color: #10b981;">● Live</span>';
+        } else if (minutesAgo < 5) {
+            syncIndicator.innerHTML = `<span style="color: #f59e0b;">● ${minutesAgo}m ago</span>`;
+        } else {
+            syncIndicator.innerHTML = `<span style="color: #ef4444;">● ${minutesAgo}m ago</span>`;
+        }
+    }
+}
+
+function createSyncIndicator() {
+    const indicator = document.createElement('div');
+    indicator.id = 'syncIndicator';
+    indicator.className = 'sync-indicator';
+    indicator.style.cssText = `
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        background: white;
+        padding: 5px 10px;
+        border-radius: 15px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        font-size: 12px;
+        z-index: 1000;
+    `;
+    document.body.appendChild(indicator);
+    return indicator;
+}
 }
