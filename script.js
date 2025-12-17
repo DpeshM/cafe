@@ -48,7 +48,7 @@ const elements = {
     salesSummary: document.getElementById('salesSummary'),
     recentTransactions: document.getElementById('recentTransactions'),
     expensesSummary: document.getElementById('expensesSummary'),
-    settingsModal: document.getElementById('settingsModal'),
+    settingsModal: document.getElementById('setupSettings'),
     expenseModal: document.getElementById('expenseModal'),
     menuItemModal: document.getElementById('menuItemModal'),
     paymentModal: document.getElementById('paymentModal'),
@@ -839,7 +839,7 @@ function saveSettings() {
     localStorage.setItem('restaurant_sheets_config', JSON.stringify(state.googleSheetsConfig));
     
     alert('Settings saved successfully! Loading data...');
-    closeModal('settingsModal');
+    document.getElementById('setupSettings').classList.remove('active');
     
     // Reload all data
     loadAllData();
@@ -1132,6 +1132,34 @@ function saveToLocalStorage() {
     localStorage.setItem('restaurant_kitchen_orders', JSON.stringify(state.kitchenOrders));
     localStorage.setItem('restaurant_transactions', JSON.stringify(state.completedTransactions));
     localStorage.setItem('restaurant_expenses', JSON.stringify(state.expenses));
+}
+
+let tableSyncTimer = null;
+function syncCurrentOrderToTable() {
+    if (!state.selectedTable) return;
+    const idx = state.tables.findIndex(t => t.number === state.selectedTable);
+    if (idx === -1) return;
+    state.tables[idx].orders = [...state.currentOrder];
+    state.tables[idx].status = state.currentOrder.length > 0 ? 'occupied' : 'vacant';
+}
+function queueTableSync() {
+    if (!state.googleSheetsConfig.connected) return;
+    if (tableSyncTimer) clearTimeout(tableSyncTimer);
+    tableSyncTimer = setTimeout(async () => {
+        try {
+            await saveToGoogleSheets(state.googleSheetsConfig.sheetNames.tables, state.tables);
+            state.googleSheetsConfig.lastSync = new Date();
+            setSyncStatus('Synced successfully!', 'connected');
+            state.lastPullTime = new Date();
+        } catch (error) {
+            console.error('Sync error:', error);
+            setSyncStatus('Sync failed!', 'error');
+            state.googleSheetsConfig.connected = false;
+            saveToLocalStorage();
+        } finally {
+            tableSyncTimer = null;
+        }
+    }, 500);
 }
 
 // Render all components
@@ -1611,6 +1639,8 @@ function addItemToOrder(item) {
     }
     
     renderOrder();
+    syncCurrentOrderToTable();
+    queueTableSync();
 }
 
 // Update quantity of an item
@@ -1622,6 +1652,8 @@ function updateQuantity(itemId, delta) {
             state.currentOrder = state.currentOrder.filter(i => i.id !== itemId);
         }
         renderOrder();
+        syncCurrentOrderToTable();
+        queueTableSync();
     }
 }
 
@@ -1629,12 +1661,16 @@ function updateQuantity(itemId, delta) {
 function removeItem(itemId) {
     state.currentOrder = state.currentOrder.filter(i => i.id !== itemId);
     renderOrder();
+    syncCurrentOrderToTable();
+    queueTableSync();
 }
 
 // Clear current order
 function clearOrder() {
     state.currentOrder = [];
     renderOrder();
+    syncCurrentOrderToTable();
+    queueTableSync();
 }
 
 // Submit order to kitchen

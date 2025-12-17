@@ -9,6 +9,8 @@
     --warning: #f59e0b;
     --gray: #94a3b8;
     --light-gray: #f1f5f9;
+    --background: #ffffff;
+    --border: #e5e7eb;
 }
 
 * {
