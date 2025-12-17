@@ -24,7 +24,11 @@ const state = {
         connected: false,
         lastSync: null
     },
-    isSyncing: false
+    isSyncing: false,
+    syncInterval: null,
+    autoSyncEnabled: true,
+    syncIntervalMs: 10000, // 10 seconds for faster sync
+    lastPullTime: null
 };
 
 // DOM Elements
@@ -97,14 +101,250 @@ const elements = {
     clearOrderBtn: document.getElementById('clearOrderBtn'),
     submitOrderBtn: document.getElementById('submitOrderBtn'),
     processPaymentBtn: document.getElementById('processPaymentBtn'),
-    closePaymentBtn: document.getElementById('closePaymentBtn')
+    closePaymentBtn: document.getElementById('closePaymentBtn'),
+    refreshBtn: document.getElementById('refreshBtn'),
+    mobileMenuBtn: null
 };
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
     loadConfig();
     setupEventListeners();
+    setupResponsiveDesign();
+    
+    // Check if on mobile and adjust UI
+    if (window.innerWidth <= 768) {
+        setupMobileUI();
+    }
 });
+
+// Setup responsive design
+function setupResponsiveDesign() {
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        if (window.innerWidth <= 768) {
+            setupMobileUI();
+        } else {
+            setupDesktopUI();
+        }
+    });
+    
+    // Handle orientation change
+    window.addEventListener('orientationchange', () => {
+        setTimeout(() => {
+            if (window.innerWidth <= 768) {
+                setupMobileUI();
+            } else {
+                setupDesktopUI();
+            }
+        }, 100);
+    });
+}
+
+// Setup mobile UI
+function setupMobileUI() {
+    // Create mobile menu button if it doesn't exist
+    if (!elements.mobileMenuBtn) {
+        const header = document.querySelector('.app-header');
+        if (header) {
+            const mobileMenuBtn = document.createElement('button');
+            mobileMenuBtn.id = 'mobileMenuBtn';
+            mobileMenuBtn.innerHTML = '<i class="fas fa-bars"></i>';
+            mobileMenuBtn.className = 'mobile-menu-btn';
+            mobileMenuBtn.style.cssText = `
+                display: block;
+                background: none;
+                border: none;
+                font-size: 24px;
+                color: var(--text);
+                margin-right: 15px;
+                cursor: pointer;
+            `;
+            header.insertBefore(mobileMenuBtn, header.firstChild);
+            elements.mobileMenuBtn = mobileMenuBtn;
+            
+            mobileMenuBtn.addEventListener('click', () => {
+                const navTabs = document.querySelector('.nav-tabs');
+                if (navTabs) {
+                    navTabs.classList.toggle('mobile-show');
+                }
+            });
+        }
+    }
+    
+    // Add mobile styles if not already added
+    if (!document.getElementById('mobile-styles')) {
+        const style = document.createElement('style');
+        style.id = 'mobile-styles';
+        style.textContent = `
+            @media (max-width: 768px) {
+                .container {
+                    padding: 10px;
+                }
+                
+                .app-header {
+                    flex-direction: row;
+                    align-items: center;
+                    padding: 10px;
+                }
+                
+                .nav-tabs {
+                    position: fixed;
+                    top: 60px;
+                    left: 0;
+                    right: 0;
+                    background: var(--background);
+                    flex-direction: column;
+                    z-index: 1000;
+                    display: none;
+                    padding: 10px;
+                    border-bottom: 2px solid var(--border);
+                }
+                
+                .nav-tabs.mobile-show {
+                    display: flex;
+                }
+                
+                .nav-tab {
+                    width: 100%;
+                    margin: 5px 0;
+                    padding: 12px;
+                    text-align: center;
+                }
+                
+                .header-actions {
+                    margin-left: auto;
+                    display: flex;
+                    align-items: center;
+                }
+                
+                .grid-container {
+                    grid-template-columns: 1fr;
+                    gap: 15px;
+                }
+                
+                .tables-grid, .menu-grid, .checkout-grid {
+                    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                }
+                
+                .table-card {
+                    min-height: 100px;
+                    padding: 15px;
+                }
+                
+                .menu-item {
+                    min-height: 80px;
+                    padding: 10px;
+                }
+                
+                .order-item {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+                
+                .item-controls {
+                    margin-top: 10px;
+                    width: 100%;
+                    justify-content: space-between;
+                }
+                
+                .modal-content {
+                    width: 95%;
+                    max-height: 90vh;
+                    margin: 10px auto;
+                    padding: 15px;
+                }
+                
+                .reports-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                
+                .expenses-table {
+                    font-size: 12px;
+                }
+                
+                .expenses-table th,
+                .expenses-table td {
+                    padding: 5px;
+                }
+                
+                .order-section {
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    background: var(--background);
+                    border-top: 2px solid var(--border);
+                    padding: 15px;
+                    z-index: 1000;
+                    max-height: 50vh;
+                    overflow-y: auto;
+                    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+                }
+                
+                .menu-category {
+                    margin-bottom: 20px;
+                }
+                
+                .category-title {
+                    font-size: 18px;
+                    margin: 15px 0 10px 0;
+                }
+                
+                /* Prevent zoom on input focus */
+                input, select, textarea {
+                    font-size: 16px !important;
+                }
+            }
+            
+            @media (max-width: 480px) {
+                .tables-grid, .menu-grid, .checkout-grid {
+                    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                }
+                
+                .table-card {
+                    padding: 10px;
+                }
+                
+                .menu-item {
+                    padding: 8px;
+                }
+                
+                .reports-grid {
+                    grid-template-columns: 1fr;
+                }
+                
+                .settings-tabs {
+                    flex-wrap: wrap;
+                }
+                
+                .settings-tab {
+                    flex: 1 0 50%;
+                    text-align: center;
+                }
+                
+                .modal-content {
+                    width: 98%;
+                    margin: 5px auto;
+                    padding: 10px;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// Setup desktop UI
+function setupDesktopUI() {
+    if (elements.mobileMenuBtn) {
+        elements.mobileMenuBtn.style.display = 'none';
+    }
+    const navTabs = document.querySelector('.nav-tabs');
+    if (navTabs) {
+        navTabs.classList.remove('mobile-show');
+        navTabs.style.display = 'flex';
+    }
+}
 
 // Load configuration from localStorage
 function loadConfig() {
@@ -136,63 +376,72 @@ async function loadAllData() {
     try {
         setSyncStatus('Loading from Google Sheets...', 'connecting');
         
-        // Load tables
-        const tablesData = await loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.tables);
+        // Load all data in parallel
+        const [tablesData, menuData, ordersData, transactionsData, expensesData] = await Promise.all([
+            loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.tables).catch(() => []),
+            loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.menu).catch(() => []),
+            loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.orders).catch(() => []),
+            loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.transactions).catch(() => []),
+            loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.expenses).catch(() => [])
+        ]);
+        
+        // Process tables data
         state.tables = tablesData.length > 0 ? tablesData.map(row => ({
-            id: row.ID || row.id || parseInt(row.Number),
-            number: parseInt(row.Number),
-            status: row.Status || 'vacant',
+            id: parseInt(row.ID || row.id || row.Number || Date.now()),
+            number: parseInt(row.Number || row.number),
+            status: row.Status || row.status || 'vacant',
             orders: row.Orders ? JSON.parse(row.Orders) : []
         })) : getDefaultTables();
         
-        // Load menu items
-        const menuData = await loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.menu);
+        // Process menu data
         state.menuItems = menuData.length > 0 ? menuData.map(row => ({
-            id: row.ID || row.id || parseInt(row.ID || row.id),
+            id: parseInt(row.ID || row.id || Date.now()),
             name: row.Name || row.name,
             price: parseFloat(row.Price || row.price),
-            category: row.Category || row.category
+            category: row.Category || row.category || 'Main'
         })) : getDefaultMenu();
         
-        // Load kitchen orders
-        const ordersData = await loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.orders);
+        // Process kitchen orders
         state.kitchenOrders = ordersData.map(row => ({
-            id: row.ID || row.id || parseInt(row.ID || row.id),
+            id: parseInt(row.ID || row.id || Date.now()),
             tableNumber: parseInt(row.TableNumber || row.tableNumber),
-            items: row.Items ? JSON.parse(row.Items || row.items) : [],
-            status: row.Status || row.status,
-            timestamp: row.Timestamp || row.timestamp
+            items: row.Items ? JSON.parse(row.Items) : [],
+            status: row.Status || row.status || 'pending',
+            timestamp: row.Timestamp || row.timestamp || new Date().toLocaleTimeString()
         })).filter(order => order.status !== 'completed');
         
-        // Load transactions
-        const transactionsData = await loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.transactions);
+        // Process transactions
         state.completedTransactions = transactionsData.map(row => ({
+            id: parseInt(row.ID || row.id || Date.now()),
             tableNumber: parseInt(row.TableNumber || row.tableNumber),
-            items: row.Items ? JSON.parse(row.Items || row.items) : [],
+            items: row.Items ? JSON.parse(row.Items) : [],
             total: parseFloat(row.Total || row.total),
             paymentMethod: row.PaymentMethod || row.paymentMethod,
             cashAmount: parseFloat(row.CashAmount || row.cashAmount || 0),
             qrAmount: parseFloat(row.QRAmount || row.qrAmount || 0),
-            timestamp: row.Timestamp || row.timestamp,
-            date: row.Date || row.date
+            timestamp: row.Timestamp || row.timestamp || new Date().toLocaleTimeString(),
+            date: row.Date || row.date || new Date().toLocaleDateString()
         }));
         
-        // Load expenses
-        const expensesData = await loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.expenses);
+        // Process expenses
         state.expenses = expensesData.map(row => ({
-            id: row.ID || row.id || parseInt(row.ID || row.id),
+            id: parseInt(row.ID || row.id || Date.now()),
             description: row.Description || row.description,
             amount: parseFloat(row.Amount || row.amount),
-            category: row.Category || row.category,
-            timestamp: row.Timestamp || row.timestamp,
-            date: row.Date || row.date
+            category: row.Category || row.category || 'Other',
+            timestamp: row.Timestamp || row.timestamp || new Date().toLocaleTimeString(),
+            date: row.Date || row.date || new Date().toLocaleDateString()
         }));
         
         state.googleSheetsConfig.connected = true;
         state.googleSheetsConfig.lastSync = new Date();
+        state.lastPullTime = new Date();
         
         setSyncStatus('Connected ✓', 'connected');
         renderAll();
+        
+        // Start auto-sync
+        startAutoSync();
         
     } catch (error) {
         console.error('Error loading from Google Sheets:', error);
@@ -207,15 +456,15 @@ async function loadAllData() {
 }
 
 // Load data from Google Sheets
-async function loadFromGoogleSheets(sheetName, useCache = false) {
+async function loadFromGoogleSheets(sheetName) {
     const { sheetId, apiKey } = state.googleSheetsConfig;
     
     if (!sheetId || !apiKey) {
         throw new Error('Google Sheets configuration missing');
     }
     
-    // Add cache buster to prevent browser caching
-    const cacheBuster = useCache ? '' : `&t=${Date.now()}`;
+    // Add cache busting to prevent browser caching
+    const cacheBuster = `&t=${Date.now()}`;
     const url = `${GOOGLE_SHEETS_API}/${sheetId}/values/${sheetName}?key=${apiKey}${cacheBuster}`;
     
     const response = await fetch(url, {
@@ -227,6 +476,11 @@ async function loadFromGoogleSheets(sheetName, useCache = false) {
     });
     
     if (!response.ok) {
+        if (response.status === 403) {
+            throw new Error('Access denied. Check API key and sharing settings.');
+        } else if (response.status === 404) {
+            throw new Error(`Sheet "${sheetName}" not found. Create it in your Google Sheet.`);
+        }
         throw new Error(`Failed to load ${sheetName}: ${response.status}`);
     }
     
@@ -235,19 +489,6 @@ async function loadFromGoogleSheets(sheetName, useCache = false) {
     if (!data.values || data.values.length === 0) {
         return [];
     }
-    
-    // Convert array of arrays to array of objects
-    const headers = data.values[0];
-    const rows = data.values.slice(1);
-    
-    return rows.map(row => {
-        const obj = {};
-        headers.forEach((header, index) => {
-            obj[header] = row[index] || '';
-        });
-        return obj;
-    });
-
     
     // Convert array of arrays to array of objects
     const headers = data.values[0];
@@ -297,11 +538,12 @@ async function saveToGoogleSheets(sheetName, data) {
             order.tableNumber,
             JSON.stringify(order.items),
             order.status,
-            order.timestamp
+            order.timestamp || new Date().toLocaleTimeString()
         ]);
     } else if (sheetName === state.googleSheetsConfig.sheetNames.transactions) {
-        headers = ['TableNumber', 'Items', 'Total', 'PaymentMethod', 'CashAmount', 'QRAmount', 'Timestamp', 'Date'];
+        headers = ['ID', 'TableNumber', 'Items', 'Total', 'PaymentMethod', 'CashAmount', 'QRAmount', 'Timestamp', 'Date'];
         values = data.map(transaction => [
+            transaction.id || Date.now(),
             transaction.tableNumber,
             JSON.stringify(transaction.items),
             transaction.total,
@@ -323,24 +565,46 @@ async function saveToGoogleSheets(sheetName, data) {
         ]);
     }
     
-    // Clear existing data
-    const clearUrl = `${GOOGLE_SHEETS_API}/${sheetId}/values/${sheetName}!A:Z:clear?key=${apiKey}`;
+    if (values.length === 0) {
+        // Write empty sheet with headers only
+        values = [];
+    }
+    
+    // Clear existing data first
+    const clearUrl = `${GOOGLE_SHEETS_API}/${sheetId}/values/${sheetName}!A1:Z1000:clear?key=${apiKey}`;
     await fetch(clearUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
     });
     
-    // Write new data (headers + values)
-    const writeData = [headers, ...values];
-    const writeUrl = `${GOOGLE_SHEETS_API}/${sheetId}/values/${sheetName}!A1:append?valueInputOption=RAW&key=${apiKey}`;
-    
-    await fetch(writeUrl, {
+    // Write headers first
+    const writeHeadersUrl = `${GOOGLE_SHEETS_API}/${sheetId}/values/${sheetName}!A1:append?valueInputOption=USER_ENTERED&key=${apiKey}`;
+    await fetch(writeHeadersUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            values: writeData
+            values: [headers]
         })
     });
+    
+    // Write data if exists
+    if (values.length > 0) {
+        const writeDataUrl = `${GOOGLE_SHEETS_API}/${sheetId}/values/${sheetName}!A2:append?valueInputOption=USER_ENTERED&key=${apiKey}`;
+        const response = await fetch(writeDataUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                values: values
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(`Failed to save to ${sheetName}: ${error.error?.message}`);
+        }
+    }
+    
+    return true;
 }
 
 // Sync all data to Google Sheets
@@ -349,23 +613,15 @@ async function syncAllData() {
     
     state.isSyncing = true;
     setSyncStatus('Syncing...', 'connecting');
-    elements.syncBtn.classList.add('btn-loading');
-    elements.syncIcon.classList.add('sync-spin');
+    if (elements.syncBtn) elements.syncBtn.classList.add('btn-loading');
+    if (elements.syncIcon) elements.syncIcon.classList.add('sync-spin');
     
     try {
-        // Sync tables
+        // Sync in sequence to avoid conflicts
         await saveToGoogleSheets(state.googleSheetsConfig.sheetNames.tables, state.tables);
-        
-        // Sync menu
         await saveToGoogleSheets(state.googleSheetsConfig.sheetNames.menu, state.menuItems);
-        
-        // Sync orders
         await saveToGoogleSheets(state.googleSheetsConfig.sheetNames.orders, state.kitchenOrders);
-        
-        // Sync transactions
         await saveToGoogleSheets(state.googleSheetsConfig.sheetNames.transactions, state.completedTransactions);
-        
-        // Sync expenses
         await saveToGoogleSheets(state.googleSheetsConfig.sheetNames.expenses, state.expenses);
         
         state.googleSheetsConfig.lastSync = new Date();
@@ -373,9 +629,13 @@ async function syncAllData() {
         
         setSyncStatus('Synced successfully!', 'connected');
         
+        // Update last pull time to trigger UI update
+        state.lastPullTime = new Date();
+        
+        // Show success message
         setTimeout(() => {
             setSyncStatus('', 'connected');
-        }, 3000);
+        }, 2000);
         
     } catch (error) {
         console.error('Sync error:', error);
@@ -383,13 +643,115 @@ async function syncAllData() {
         state.googleSheetsConfig.connected = false;
     } finally {
         state.isSyncing = false;
-        elements.syncBtn.classList.remove('btn-loading');
-        elements.syncIcon.classList.remove('sync-spin');
+        if (elements.syncBtn) elements.syncBtn.classList.remove('btn-loading');
+        if (elements.syncIcon) elements.syncIcon.classList.remove('sync-spin');
+    }
+}
+
+// Start auto-sync
+function startAutoSync() {
+    if (state.syncInterval) {
+        clearInterval(state.syncInterval);
+    }
+    
+    if (state.autoSyncEnabled && state.googleSheetsConfig.connected) {
+        state.syncInterval = setInterval(async () => {
+            if (document.hidden) return; // Don't sync if tab is hidden
+            
+            try {
+                await pullFromGoogleSheets();
+            } catch (error) {
+                console.error('Auto-sync failed:', error);
+            }
+        }, state.syncIntervalMs);
+    }
+}
+
+// Pull data from Google Sheets (for other devices)
+async function pullFromGoogleSheets() {
+    if (!state.googleSheetsConfig.connected || state.isSyncing) return;
+    
+    try {
+        state.isSyncing = true;
+        
+        // Load only tables and orders (critical data for sync)
+        const [tablesData, ordersData] = await Promise.all([
+            loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.tables).catch(() => []),
+            loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.orders).catch(() => [])
+        ]);
+        
+        let dataChanged = false;
+        
+        // Update tables if changed
+        if (tablesData.length > 0) {
+            const newTables = tablesData.map(row => ({
+                id: parseInt(row.ID || row.id || row.Number || Date.now()),
+                number: parseInt(row.Number || row.number),
+                status: row.Status || row.status || 'vacant',
+                orders: row.Orders ? JSON.parse(row.Orders) : []
+            }));
+            
+            // Sort tables by number
+            newTables.sort((a, b) => a.number - b.number);
+            
+            // Check if tables data changed
+            const oldTablesJSON = JSON.stringify(state.tables.map(t => ({
+                number: t.number,
+                status: t.status,
+                orders: t.orders
+            })).sort((a, b) => a.number - b.number));
+            
+            const newTablesJSON = JSON.stringify(newTables.map(t => ({
+                number: t.number,
+                status: t.status,
+                orders: t.orders
+            })));
+            
+            if (oldTablesJSON !== newTablesJSON) {
+                state.tables = newTables;
+                dataChanged = true;
+            }
+        }
+        
+        // Update kitchen orders if changed
+        if (ordersData.length > 0) {
+            const newKitchenOrders = ordersData.map(row => ({
+                id: parseInt(row.ID || row.id || Date.now()),
+                tableNumber: parseInt(row.TableNumber || row.tableNumber),
+                items: row.Items ? JSON.parse(row.Items) : [],
+                status: row.Status || row.status || 'pending',
+                timestamp: row.Timestamp || row.timestamp || new Date().toLocaleTimeString()
+            })).filter(order => order.status !== 'completed');
+            
+            // Check if orders data changed
+            const oldOrdersJSON = JSON.stringify(state.kitchenOrders);
+            const newOrdersJSON = JSON.stringify(newKitchenOrders);
+            
+            if (oldOrdersJSON !== newOrdersJSON) {
+                state.kitchenOrders = newKitchenOrders;
+                dataChanged = true;
+            }
+        }
+        
+        state.lastPullTime = new Date();
+        
+        // Only re-render if data changed
+        if (dataChanged) {
+            renderAll();
+            console.log('Data updated from Google Sheets at', new Date().toLocaleTimeString());
+        }
+        
+    } catch (error) {
+        console.error('Pull error:', error);
+    } finally {
+        state.isSyncing = false;
     }
 }
 
 // Set sync status
 function setSyncStatus(message, type = '') {
+    if (!elements.syncStatus) return;
+    
     elements.syncStatus.textContent = message;
     
     if (message) {
@@ -438,7 +800,7 @@ async function testConnection() {
         
         let errorMessage = error.message;
         if (errorMessage.includes('PERMISSION_DENIED')) {
-            errorMessage = 'Permission denied. Please:\n1. Share your Google Sheet with "Anyone with the link" as Viewer\n2. Or add the service account email to the sheet';
+            errorMessage = 'Permission denied. Please:\n1. Share your Google Sheet with "Anyone with the link" as Viewer\n2. Make sure API key is not restricted';
         } else if (errorMessage.includes('API key not valid')) {
             errorMessage = 'API Key is invalid. Please check your Google Cloud Console settings';
         } else if (errorMessage.includes('not found')) {
@@ -478,7 +840,177 @@ function saveSettings() {
     
     alert('Settings saved successfully! Loading data...');
     closeModal('settingsModal');
+    
+    // Reload all data
     loadAllData();
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    // Navigation tabs
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabId = tab.getAttribute('data-tab');
+            switchTab(tabId);
+            // Close mobile menu if open
+            const navTabs = document.querySelector('.nav-tabs');
+            if (navTabs && navTabs.classList.contains('mobile-show')) {
+                navTabs.classList.remove('mobile-show');
+            }
+        });
+    });
+    
+    // Settings tabs
+    document.querySelectorAll('.settings-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabId = tab.getAttribute('data-settings-tab');
+            switchSettingsTab(tabId);
+        });
+    });
+    
+    // Settings button
+    if (elements.settingsBtn) {
+        elements.settingsBtn.addEventListener('click', openSettingsModal);
+    }
+    
+    // Close settings button
+    if (elements.closeSettingsBtn) {
+        elements.closeSettingsBtn.addEventListener('click', () => {
+            closeModal('settingsModal');
+        });
+    }
+    
+    // Sync button
+    if (elements.syncBtn) {
+        elements.syncBtn.addEventListener('click', syncAllData);
+    }
+    
+    // Refresh button
+    if (elements.refreshBtn) {
+        elements.refreshBtn.addEventListener('click', async () => {
+            if (!state.googleSheetsConfig.connected) {
+                alert('Not connected to Google Sheets');
+                return;
+            }
+            
+            elements.refreshBtn.classList.add('btn-loading');
+            elements.refreshBtn.disabled = true;
+            
+            try {
+                await pullFromGoogleSheets();
+                alert('Data refreshed successfully!');
+            } catch (error) {
+                alert('Failed to refresh data: ' + error.message);
+            } finally {
+                elements.refreshBtn.classList.remove('btn-loading');
+                elements.refreshBtn.disabled = false;
+            }
+        });
+    }
+    
+    // Test connection button
+    if (elements.testConnectionBtn) {
+        elements.testConnectionBtn.addEventListener('click', testConnection);
+    }
+    
+    // Save settings button
+    if (elements.saveSettingsBtn) {
+        elements.saveSettingsBtn.addEventListener('click', saveSettings);
+    }
+    
+    // Add table button
+    if (elements.addTableBtn) {
+        elements.addTableBtn.addEventListener('click', addTable);
+    }
+    
+    // Add menu item button
+    if (elements.addMenuItemBtn) {
+        elements.addMenuItemBtn.addEventListener('click', openAddMenuItemModal);
+    }
+    
+    // Save menu item button
+    if (elements.saveMenuItemBtn) {
+        elements.saveMenuItemBtn.addEventListener('click', saveMenuItem);
+    }
+    
+    // Close menu item modal
+    if (elements.closeMenuItemBtn) {
+        elements.closeMenuItemBtn.addEventListener('click', () => {
+            closeModal('menuItemModal');
+        });
+    }
+    
+    // Save expense button
+    if (elements.saveExpenseBtn) {
+        elements.saveExpenseBtn.addEventListener('click', addExpense);
+    }
+    
+    // Close expense modal
+    if (elements.closeExpenseBtn) {
+        elements.closeExpenseBtn.addEventListener('click', () => {
+            closeModal('expenseModal');
+        });
+    }
+    
+    // Add expense button
+    if (elements.addExpenseBtn) {
+        elements.addExpenseBtn.addEventListener('click', openAddExpenseModal);
+    }
+    
+    // Download button
+    if (elements.downloadBtn) {
+        elements.downloadBtn.addEventListener('click', downloadExcel);
+    }
+    
+    // Clear order button
+    if (elements.clearOrderBtn) {
+        elements.clearOrderBtn.addEventListener('click', clearOrder);
+    }
+    
+    // Submit order button
+    if (elements.submitOrderBtn) {
+        elements.submitOrderBtn.addEventListener('click', submitOrder);
+    }
+    
+    // Payment method change
+    if (elements.paymentMethod) {
+        elements.paymentMethod.addEventListener('change', updatePaymentSections);
+    }
+    
+    // Process payment button
+    if (elements.processPaymentBtn) {
+        elements.processPaymentBtn.addEventListener('click', processPayment);
+    }
+    
+    // Close payment modal
+    if (elements.closePaymentBtn) {
+        elements.closePaymentBtn.addEventListener('click', () => {
+            closeModal('paymentModal');
+        });
+    }
+    
+    // Click outside modal to close
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+    });
+    
+    // Sync when tab becomes visible
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && state.googleSheetsConfig.connected) {
+            pullFromGoogleSheets();
+        }
+    });
+    
+    // Sync when window gets focus
+    window.addEventListener('focus', () => {
+        if (state.googleSheetsConfig.connected) {
+            pullFromGoogleSheets();
+        }
+    });
 }
 
 // Open settings modal
@@ -616,6 +1148,8 @@ function renderAll() {
 
 // Render tables
 function renderTables() {
+    if (!elements.tablesGrid) return;
+    
     elements.tablesGrid.innerHTML = '';
     
     state.tables.forEach(table => {
@@ -655,6 +1189,8 @@ function renderTables() {
 
 // Render menu items grouped by category
 function renderMenu() {
+    if (!elements.menuGrid) return;
+    
     elements.menuGrid.innerHTML = '';
     
     // Group items by category
@@ -702,6 +1238,8 @@ function renderMenu() {
 
 // Render current order
 function renderOrder() {
+    if (!elements.orderSection) return;
+    
     if (state.selectedTable) {
         elements.orderSection.classList.remove('hidden');
         elements.selectedTableNumber.textContent = state.selectedTable;
@@ -724,6 +1262,8 @@ function renderOrder() {
 
 // Render current order items
 function renderCurrentOrderItems() {
+    if (!elements.currentOrderItems) return;
+    
     elements.currentOrderItems.innerHTML = '';
     
     if (state.currentOrder.length === 0) {
@@ -772,6 +1312,8 @@ function renderCurrentOrderItems() {
 
 // Render kitchen orders
 function renderKitchenOrders() {
+    if (!elements.kitchenOrdersList) return;
+    
     elements.kitchenOrdersList.innerHTML = '';
     
     if (state.kitchenOrders.length === 0) {
@@ -821,6 +1363,8 @@ function renderKitchenOrders() {
 
 // Render checkout tab
 function renderCheckout() {
+    if (!elements.checkoutContent) return;
+    
     elements.checkoutContent.innerHTML = '';
     
     // Find occupied tables
@@ -864,6 +1408,8 @@ function renderCheckout() {
 
 // Render expenses
 function renderExpenses() {
+    if (!elements.expensesList) return;
+    
     elements.expensesList.innerHTML = '';
     
     if (state.expenses.length === 0) {
@@ -914,6 +1460,8 @@ function renderExpenses() {
 
 // Render tables in settings
 function renderManageTables() {
+    if (!elements.manageTablesGrid) return;
+    
     elements.manageTablesGrid.innerHTML = '';
     
     state.tables.forEach(table => {
@@ -941,6 +1489,8 @@ function renderManageTables() {
 
 // Render menu items in settings
 function renderManageMenuItems() {
+    if (!elements.manageMenuItems) return;
+    
     elements.manageMenuItems.innerHTML = '';
     
     // Group items by category
@@ -1234,6 +1784,7 @@ async function processPayment() {
         }
         
         transaction = {
+            id: Date.now(),
             tableNumber: state.selectedTable,
             items: [...table.orders],
             total: total,
@@ -1245,6 +1796,7 @@ async function processPayment() {
         };
     } else {
         transaction = {
+            id: Date.now(),
             tableNumber: state.selectedTable,
             items: [...table.orders],
             total: total,
@@ -1541,6 +2093,8 @@ function calculateTotal(items) {
 
 // Update download button visibility
 function updateDownloadButton() {
+    if (!elements.downloadBtn) return;
+    
     if (state.completedTransactions.length > 0 || state.expenses.length > 0) {
         elements.downloadBtn.classList.remove('hidden');
     } else {
@@ -1621,6 +2175,8 @@ function renderReports() {
 
 // Render sales summary
 function renderSalesSummary() {
+    if (!elements.salesSummary) return;
+    
     const totalSales = state.completedTransactions.reduce((sum, t) => sum + t.total, 0);
     const totalCash = state.completedTransactions.reduce((sum, t) => sum + t.cashAmount, 0);
     const totalQR = state.completedTransactions.reduce((sum, t) => sum + t.qrAmount, 0);
@@ -1650,6 +2206,8 @@ function renderSalesSummary() {
 
 // Render recent transactions
 function renderRecentTransactions() {
+    if (!elements.recentTransactions) return;
+    
     const recentTransactions = state.completedTransactions.slice(-10).reverse();
     
     if (recentTransactions.length === 0) {
@@ -1674,6 +2232,8 @@ function renderRecentTransactions() {
 
 // Render expenses summary
 function renderExpensesSummary() {
+    if (!elements.expensesSummary) return;
+    
     const totalExpenses = state.expenses.reduce((sum, e) => sum + e.amount, 0);
     const expensesByCategory = state.expenses.reduce((acc, e) => {
         acc[e.category] = (acc[e.category] || 0) + e.amount;
@@ -1696,222 +2256,4 @@ function renderExpensesSummary() {
             `).join('')}
         </div>
     `;
-}
-
-// Setup event listeners
-function setupEventListeners() {
-    // Navigation tabs
-    document.querySelectorAll('.nav-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            const tabId = tab.getAttribute('data-tab');
-            switchTab(tabId);
-        });
-    });
-    
-    // Settings tabs
-    document.querySelectorAll('.settings-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            const tabId = tab.getAttribute('data-settings-tab');
-            switchSettingsTab(tabId);
-        });
-    });
-    
-    // Settings button
-    elements.settingsBtn.addEventListener('click', openSettingsModal);
-    
-    // Close settings button
-    elements.closeSettingsBtn.addEventListener('click', () => {
-        closeModal('settingsModal');
-    });
-    
-    // Sync button
-    elements.syncBtn.addEventListener('click', syncAllData);
-    
-    // Test connection button
-    elements.testConnectionBtn.addEventListener('click', testConnection);
-    
-    // Save settings button
-    elements.saveSettingsBtn.addEventListener('click', saveSettings);
-    
-    // Add table button
-    elements.addTableBtn.addEventListener('click', addTable);
-    
-    // Add menu item button
-    elements.addMenuItemBtn.addEventListener('click', openAddMenuItemModal);
-    
-    // Save menu item button
-    elements.saveMenuItemBtn.addEventListener('click', saveMenuItem);
-    
-    // Close menu item modal
-    elements.closeMenuItemBtn.addEventListener('click', () => {
-        closeModal('menuItemModal');
-    });
-    
-    // Save expense button
-    elements.saveExpenseBtn.addEventListener('click', addExpense);
-    
-    // Close expense modal
-    elements.closeExpenseBtn.addEventListener('click', () => {
-        closeModal('expenseModal');
-    });
-    
-    // Add expense button
-    elements.addExpenseBtn.addEventListener('click', openAddExpenseModal);
-    
-    // Download button
-    elements.downloadBtn.addEventListener('click', downloadExcel);
-    
-    // Clear order button
-    elements.clearOrderBtn.addEventListener('click', clearOrder);
-    
-    // Submit order button
-    elements.submitOrderBtn.addEventListener('click', submitOrder);
-    
-    // Payment method change
-    elements.paymentMethod.addEventListener('change', updatePaymentSections);
-    
-    // Process payment button
-    elements.processPaymentBtn.addEventListener('click', processPayment);
-    
-    // Close payment modal
-    elements.closePaymentBtn.addEventListener('click', () => {
-        closeModal('paymentModal');
-    });
-    
-    // Click outside modal to close
-    document.querySelectorAll('.modal-overlay').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.classList.remove('active');
-            }
-        });
-    });
-
-    // Add to state object
-const state = {
-    // ... existing properties ...
-    syncInterval: null,
-    autoSyncEnabled: true,
-    syncIntervalMs: 30000, // 30 seconds
-    lastPullTime: null
-};
-
-// Add after loadAllData function
-function startAutoSync() {
-    if (state.syncInterval) {
-        clearInterval(state.syncInterval);
-    }
-    
-    if (state.autoSyncEnabled && state.googleSheetsConfig.connected) {
-        state.syncInterval = setInterval(async () => {
-            if (document.hidden) return; // Don't sync if tab is hidden
-            
-            try {
-                await pullFromGoogleSheets();
-                updateSyncIndicator();
-                console.log('Auto-sync completed');
-            } catch (error) {
-                console.error('Auto-sync failed:', error);
-            }
-        }, state.syncIntervalMs);
-        
-        // Initial indicator update
-        updateSyncIndicator();
-        console.log('Auto-sync started');
-    }
-}
-
-// Add new function to pull data without pushing
-async function pullFromGoogleSheets() {
-    if (!state.googleSheetsConfig.connected || state.isSyncing) return;
-    
-    try {
-        state.isSyncing = true;
-        
-        // Load tables
-        const tablesData = await loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.tables);
-        const newTables = tablesData.length > 0 ? tablesData.map(row => ({
-            id: row.ID || parseInt(row.Number),
-            number: parseInt(row.Number),
-            status: row.Status || 'vacant',
-            orders: row.Orders ? JSON.parse(row.Orders) : []
-        })) : state.tables;
-        
-        // Load kitchen orders
-        const ordersData = await loadFromGoogleSheets(state.googleSheetsConfig.sheetNames.orders);
-        const newKitchenOrders = ordersData.map(row => ({
-            id: row.ID || parseInt(row.ID),
-            tableNumber: parseInt(row.TableNumber),
-            items: row.Items ? JSON.parse(row.Items) : [],
-            status: row.Status,
-            timestamp: row.Timestamp
-        })).filter(order => order.status !== 'completed');
-        
-        // Update state only if data has changed
-        let dataChanged = false;
-        
-        // Compare tables
-        if (JSON.stringify(newTables) !== JSON.stringify(state.tables)) {
-            state.tables = newTables;
-            dataChanged = true;
-        }
-        
-        // Compare kitchen orders
-        if (JSON.stringify(newKitchenOrders) !== JSON.stringify(state.kitchenOrders)) {
-            state.kitchenOrders = newKitchenOrders;
-            dataChanged = true;
-        }
-        
-        // Update last sync time
-        state.lastPullTime = new Date();
-        
-        // Only re-render if data changed
-        if (dataChanged) {
-            renderAll();
-            console.log('Data updated from Google Sheets');
-        }
-        
-    } catch (error) {
-        console.error('Pull error:', error);
-    } finally {
-        state.isSyncing = false;
-    }
-}
-
-// Update the saveSettings function to start auto-sync
-// Keep existing `saveSettings`, `syncAllData`, and `startAutoSync` definitions above.
-// The following helper functions provide a small sync indicator UI used by auto-sync.
-function updateSyncIndicator() {
-    const syncIndicator = document.getElementById('syncIndicator') || createSyncIndicator();
-    
-    if (state.googleSheetsConfig.connected && state.lastPullTime) {
-        const minutesAgo = Math.floor((new Date() - state.lastPullTime) / 60000);
-        if (minutesAgo < 1) {
-            syncIndicator.innerHTML = '<span style="color: #10b981;">● Live</span>';
-        } else if (minutesAgo < 5) {
-            syncIndicator.innerHTML = `<span style="color: #f59e0b;">● ${minutesAgo}m ago</span>`;
-        } else {
-            syncIndicator.innerHTML = `<span style="color: #ef4444;">● ${minutesAgo}m ago</span>`;
-        }
-    }
-}
-
-function createSyncIndicator() {
-    const indicator = document.createElement('div');
-    indicator.id = 'syncIndicator';
-    indicator.className = 'sync-indicator';
-    indicator.style.cssText = `
-        position: fixed;
-        bottom: 10px;
-        right: 10px;
-        background: white;
-        padding: 5px 10px;
-        border-radius: 15px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        font-size: 12px;
-        z-index: 1000;
-    `;
-    document.body.appendChild(indicator);
-    return indicator;
-}
 }
