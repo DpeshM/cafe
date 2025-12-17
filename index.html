@@ -14,6 +14,38 @@
         <div class="loading-text">Loading Restaurant POS...</div>
     </div>
     
+    <div class="setup-wizard hidden" id="setupWizard">
+        <div class="wizard-content">
+            <h2 class="wizard-title">Quick Setup</h2>
+            <p class="wizard-subtitle">Choose how to connect to Google Sheets</p>
+            
+            <div class="setup-step">
+                <h3><span class="step-number">1</span> Select method</h3>
+                <label class="setup-option">
+                    <input type="radio" name="wizardMethod" id="wizardOptionScript" checked>
+                    <div>
+                        <div><strong>Google Apps Script Web App URL</strong></div>
+                        <div>Recommended. No API key required. Deploy Apps Script as Web App and paste its URL.</div>
+                    </div>
+                </label>
+                <label class="setup-option">
+                    <input type="radio" name="wizardMethod" id="wizardOptionApi">
+                    <div>
+                        <div><strong>Google Sheets API Key</strong></div>
+                        <div>Use a public API key. Ensure your sheet is readable via API.</div>
+                    </div>
+                </label>
+            </div>
+            
+            <button class="btn-primary" id="wizardContinueBtn">Continue</button>
+            <button class="btn-secondary" id="wizardCancelBtn">Cancel</button>
+            
+            <div class="info-box">
+                <p>Tip: Sheet ID is in the URL: <code>docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit</code></p>
+            </div>
+        </div>
+    </div>
+    
     <!-- Header Navigation -->
     <header>
         <div class="container nav-container app-header">

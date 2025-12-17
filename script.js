@@ -35,6 +35,7 @@ const state = {
 // DOM Elements
 const elements = {
     loadingScreen: document.getElementById('loadingScreen'),
+    setupWizard: document.getElementById('setupWizard'),
     tablesGrid: document.getElementById('tablesGrid'),
     menuGrid: document.getElementById('menuGrid'),
     orderSection: document.getElementById('orderSection'),
@@ -60,6 +61,10 @@ const elements = {
     syncIcon: document.getElementById('syncIcon'),
     syncBtnText: document.getElementById('syncBtnText'),
     downloadBtn: document.getElementById('downloadBtn'),
+    wizardOptionScript: document.getElementById('wizardOptionScript'),
+    wizardOptionApi: document.getElementById('wizardOptionApi'),
+    wizardContinueBtn: document.getElementById('wizardContinueBtn'),
+    wizardCancelBtn: document.getElementById('wizardCancelBtn'),
     
     // Settings inputs
     sheetId: document.getElementById('sheetId'),
@@ -355,20 +360,32 @@ function loadConfig() {
             const parsed = JSON.parse(config);
             state.googleSheetsConfig = parsed;
             
-            if (state.googleSheetsConfig.sheetId && state.googleSheetsConfig.apiKey) {
+            if (state.googleSheetsConfig.sheetId && (state.googleSheetsConfig.apiKey || state.googleSheetsConfig.scriptUrl)) {
                 loadAllData();
             } else {
                 elements.loadingScreen.style.display = 'none';
-                setTimeout(() => openSettingsModal(), 500);
+                if (elements.setupWizard) {
+                    elements.setupWizard.classList.remove('hidden');
+                } else {
+                    setTimeout(() => openSettingsModal(), 500);
+                }
             }
         } else {
             elements.loadingScreen.style.display = 'none';
-            setTimeout(() => openSettingsModal(), 500);
+            if (elements.setupWizard) {
+                elements.setupWizard.classList.remove('hidden');
+            } else {
+                setTimeout(() => openSettingsModal(), 500);
+            }
         }
     } catch (error) {
         console.error('Error loading config:', error);
         elements.loadingScreen.style.display = 'none';
-        setTimeout(() => openSettingsModal(), 500);
+        if (elements.setupWizard) {
+            elements.setupWizard.classList.remove('hidden');
+        } else {
+            setTimeout(() => openSettingsModal(), 500);
+        }
     }
 }
 
@@ -1137,6 +1154,28 @@ function setupEventListeners() {
             pullFromGoogleSheets();
         }
     });
+    
+    if (elements.wizardContinueBtn) {
+        elements.wizardContinueBtn.addEventListener('click', () => {
+            if (elements.setupWizard) {
+                elements.setupWizard.classList.add('hidden');
+            }
+            openSettingsModal();
+            if (elements.wizardOptionScript && elements.wizardOptionScript.checked) {
+                elements.scriptUrl.focus();
+            } else {
+                elements.apiKey.focus();
+            }
+        });
+    }
+    
+    if (elements.wizardCancelBtn) {
+        elements.wizardCancelBtn.addEventListener('click', () => {
+            if (elements.setupWizard) {
+                elements.setupWizard.classList.add('hidden');
+            }
+        });
+    }
 }
 
 // Open settings modal
