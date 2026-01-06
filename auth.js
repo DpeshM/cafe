@@ -2,8 +2,8 @@
 class GoogleAuth {
     constructor() {
         // IMPORTANT: Make sure these are correct
-        this.CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com'; // Replace
-        this.API_KEY = 'YOUR_API_KEY'; // Replace
+        this.CLIENT_ID = '487976344571-q71d1tl69lqv3ckg4je6s7sbrjrid97p.apps.googleusercontent.com'; // Replace
+        this.API_KEY = 'AIzaSyC106AewYLjiJ20vunHUmzaLnUxLtDzyCA'; // Replace
         this.SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets';
         
         this.tokenClient = null;
