@@ -1,143 +1,127 @@
-// Google OAuth Configuration and Authentication
+// Simplified Google Auth - Most common fix
 class GoogleAuth {
     constructor() {
-        this.CLIENT_ID = '487976344571-q71d1tl69lqv3ckg4je6s7sbrjrid97p.apps.googleusercontent.com'; // Replace with your actual Client ID
-        this.API_KEY = 'AIzaSyC106AewYLjiJ20vunHUmzaLnUxLtDzyCA'; // Replace with your actual API Key
-        this.DISCOVERY_DOCS = [
-            'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-            'https://sheets.googleapis.com/$discovery/rest?version=v4'
-        ];
+        // IMPORTANT: Replace these with your actual credentials
+        this.CLIENT_ID = '487976344571-q71d1tl69lqv3ckg4je6s7sbrjrid97p.apps.googleusercontent.com';
+        this.API_KEY = 'AIzaSyC106AewYLjiJ20vunHUmzaLnUxLtDzyCA';
         this.SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets';
         
-        this.gapiLoaded = false;
-        this.gisLoaded = false;
         this.tokenClient = null;
         this.isSignedIn = false;
         
         this.initGoogleAPIs();
     }
     
-    initGoogleAPIs() {
-        // Load the gapi client and auth2 library
-        gapi.load('client', this.initializeGapiClient.bind(this));
-        
-        // Load the GIS library
-        const script = document.createElement('script');
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.onload = () => {
-            this.gisLoaded = true;
-            this.initializeGIS();
-        };
-        document.head.appendChild(script);
-    }
-    
-    async initializeGapiClient() {
+    async initGoogleAPIs() {
         try {
+            console.log('Initializing Google APIs...');
+            
+            // Load the Google API client library
+            await new Promise((resolve) => {
+                gapi.load('client', resolve);
+            });
+            
+            console.log('gapi.load completed');
+            
+            // Initialize the client
             await gapi.client.init({
                 apiKey: this.API_KEY,
-                discoveryDocs: this.DISCOVERY_DOCS,
+                discoveryDocs: [
+                    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+                    'https://sheets.googleapis.com/$discovery/rest?version=v4'
+                ],
             });
-            this.gapiLoaded = true;
-            console.log('Google API client initialized');
+            
+            console.log('gapi.client.init completed');
+            
+            // Initialize the token client
+            this.tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: this.CLIENT_ID,
+                scope: this.SCOPES,
+                callback: (response) => {
+                    if (response.error !== undefined) {
+                        console.error('OAuth error:', response);
+                        this.showError('Authentication failed: ' + response.error);
+                        return;
+                    }
+                    console.log('OAuth success, token received');
+                    this.handleAuthSuccess(response.access_token);
+                },
+            });
+            
+            console.log('Token client initialized');
             
             // Check if user is already signed in
             this.checkSignedIn();
+            
         } catch (error) {
-            console.error('Error initializing Google API client:', error);
-            this.showError('Failed to initialize Google services');
+            console.error('Error initializing Google APIs:', error);
+            this.showError('Failed to initialize Google services: ' + error.message);
         }
-    }
-    
-    initializeGIS() {
-        this.tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: this.CLIENT_ID,
-            scope: this.SCOPES,
-            callback: (response) => {
-                if (response.error !== undefined) {
-                    throw response;
-                }
-                this.handleAuthSuccess(response.access_token);
-            },
-            error_callback: (error) => {
-                console.error('GIS error:', error);
-                this.showError('Authentication failed');
-            }
-        });
     }
     
     handleAuthSuccess(accessToken) {
-        this.isSignedIn = true;
+        console.log('Setting access token');
         gapi.client.setToken({ access_token: accessToken });
+        this.isSignedIn = true;
         
-        // Hide auth modal, show app
-        document.getElementById('authModal').style.display = 'none';
+        // Show app, hide auth modal
+        document.getElementById('authModal').classList.remove('active');
         document.getElementById('appContainer').style.display = 'flex';
         
-        // Update UI
-        this.updateAuthUI();
+        // Update sync status
+        const syncStatus = document.getElementById('syncStatus');
+        syncStatus.innerHTML = '<i class="fas fa-check-circle"></i> Connected to Google Drive';
+        syncStatus.className = 'sync-status';
         
-        // Initialize data sync
+        console.log('Authentication successful');
+        
+        // Initialize the rest of the app
         if (window.dataManager) {
             window.dataManager.initialize();
         }
-        
-        console.log('User authenticated successfully');
     }
     
     checkSignedIn() {
         const token = gapi.client.getToken();
         if (token) {
+            console.log('Found existing token');
             this.isSignedIn = true;
-            document.getElementById('authModal').style.display = 'none';
+            document.getElementById('authModal').classList.remove('active');
             document.getElementById('appContainer').style.display = 'flex';
-            this.updateAuthUI();
             
             if (window.dataManager) {
                 window.dataManager.initialize();
             }
-        }
-    }
-    
-    updateAuthUI() {
-        const syncStatus = document.getElementById('syncStatus');
-        if (this.isSignedIn) {
-            syncStatus.innerHTML = '<i class="fas fa-check-circle"></i> Connected to Google Drive';
-            syncStatus.className = 'sync-status';
+        } else {
+            console.log('No existing token found');
         }
     }
     
     signIn() {
-        if (!this.gapiLoaded || !this.gisLoaded) {
-            this.showError('Google services still loading. Please try again.');
-            return;
-        }
-        
-        if (gapi.client.getToken() === null) {
+        console.log('Sign in clicked');
+        if (this.tokenClient) {
             this.tokenClient.requestAccessToken({ prompt: 'consent' });
         } else {
-            this.tokenClient.requestAccessToken({ prompt: '' });
+            this.showError('Google services not loaded yet. Please wait.');
         }
     }
     
     signOut() {
         const token = gapi.client.getToken();
         if (token !== null) {
-            google.accounts.oauth2.revoke(token.access_token, () => {
-                console.log('Access token revoked');
-            });
+            google.accounts.oauth2.revoke(token.access_token);
             gapi.client.setToken(null);
             this.isSignedIn = false;
             
             // Show auth modal, hide app
-            document.getElementById('authModal').style.display = 'flex';
+            document.getElementById('authModal').classList.add('active');
             document.getElementById('appContainer').style.display = 'none';
             
             // Clear local data
             localStorage.clear();
             
-            // Reset UI
-            document.getElementById('authStatus').innerHTML = '';
-            document.getElementById('authStatus').className = 'auth-status';
+            console.log('Signed out');
         }
     }
     
@@ -145,34 +129,30 @@ class GoogleAuth {
         const authStatus = document.getElementById('authStatus');
         authStatus.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
         authStatus.className = 'auth-status status-error';
-    }
-    
-    showSuccess(message) {
-        const authStatus = document.getElementById('authStatus');
-        authStatus.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
-        authStatus.className = 'auth-status status-success';
+        console.error('Auth Error:', message);
     }
     
     isAuthenticated() {
         return this.isSignedIn && gapi.client.getToken() !== null;
     }
-    
-    getAccessToken() {
-        const token = gapi.client.getToken();
-        return token ? token.access_token : null;
-    }
 }
 
-// Initialize auth when DOM is loaded
+// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, initializing auth...');
+    
+    // Create global instance
     window.googleAuth = new GoogleAuth();
     
     // Set up event listeners
     document.getElementById('signInButton').addEventListener('click', () => {
+        console.log('Sign in button clicked');
         window.googleAuth.signIn();
     });
     
     document.getElementById('signOutButton').addEventListener('click', () => {
         window.googleAuth.signOut();
     });
+    
+    console.log('Auth initialization complete');
 });
