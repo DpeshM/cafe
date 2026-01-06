@@ -251,4 +251,171 @@ class DataManager {
         this.currentOrder = newOrder;
         
         // Update table status
-       
+        this.updateTable(tableId, { status: 'occupied' });
+        
+        this.saveToLocalStorage();
+        return newOrder;
+    }
+    
+    addToOrder(itemId, quantity = 1) {
+        if (!this.currentOrder) return null;
+        
+        const menuItem = this.getMenuItem(itemId);
+        if (!menuItem) return null;
+        
+        // Check if item already in order
+        const existingItemIndex = this.currentOrder.items.findIndex(i => i.id === itemId);
+        
+        if (existingItemIndex >= 0) {
+            // Update quantity
+            this.currentOrder.items[existingItemIndex].quantity += quantity;
+            this.currentOrder.items[existingItemIndex].total = 
+                this.currentOrder.items[existingItemIndex].quantity * this.currentOrder.items[existingItemIndex].price;
+        } else {
+            // Add new item
+            const orderItem = {
+                id: menuItem.id,
+                name: menuItem.name,
+                price: menuItem.price,
+                quantity: quantity,
+                total: menuItem.price * quantity
+            };
+            this.currentOrder.items.push(orderItem);
+        }
+        
+        this.calculateOrderTotals();
+        this.saveToLocalStorage();
+        
+        return this.currentOrder;
+    }
+    
+    updateOrderItemQuantity(itemId, newQuantity) {
+        if (!this.currentOrder || newQuantity < 0) return null;
+        
+        const itemIndex = this.currentOrder.items.findIndex(i => i.id === itemId);
+        if (itemIndex === -1) return null;
+        
+        if (newQuantity === 0) {
+            // Remove item
+            this.currentOrder.items.splice(itemIndex, 1);
+        } else {
+            // Update quantity
+            this.currentOrder.items[itemIndex].quantity = newQuantity;
+            this.currentOrder.items[itemIndex].total = 
+                newQuantity * this.currentOrder.items[itemIndex].price;
+        }
+        
+        this.calculateOrderTotals();
+        this.saveToLocalStorage();
+        
+        return this.currentOrder;
+    }
+    
+    calculateOrderTotals() {
+        if (!this.currentOrder) return;
+        
+        this.currentOrder.subtotal = this.currentOrder.items.reduce((sum, item) => sum + item.total, 0);
+        this.currentOrder.tax = this.currentOrder.subtotal * 0.10; // 10% tax
+        this.currentOrder.total = this.currentOrder.subtotal + this.currentOrder.tax;
+        this.currentOrder.updatedAt = new Date().toISOString();
+    }
+    
+    closeOrder() {
+        if (!this.currentOrder) return null;
+        
+        this.currentOrder.status = 'closed';
+        this.currentOrder.closedAt = new Date().toISOString();
+        
+        // Update table status
+        const table = this.getTable(this.currentOrder.tableId);
+        if (table) {
+            this.updateTable(table.id, { status: 'available' });
+        }
+        
+        // Sync to Google Drive
+        if (window.driveSync && window.googleAuth.isAuthenticated()) {
+            window.driveSync.syncOrders();
+        }
+        
+        const closedOrder = { ...this.currentOrder };
+        this.currentOrder = null;
+        this.selectedTableId = null;
+        
+        this.saveToLocalStorage();
+        return closedOrder;
+    }
+    
+    clearOrder() {
+        if (!this.currentOrder) return null;
+        
+        this.currentOrder.items = [];
+        this.calculateOrderTotals();
+        this.saveToLocalStorage();
+        
+        return this.currentOrder;
+    }
+    
+    getOrder(orderId) {
+        return this.orders.find(o => o.id === orderId);
+    }
+    
+    getActiveOrderForTable(tableId) {
+        return this.orders.find(o => o.tableId === tableId && o.status === 'active');
+    }
+    
+    // Utility Methods
+    generateId(prefix) {
+        return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+    
+    // Sync Methods
+    async syncFromDrive() {
+        if (!window.driveSync || !window.googleAuth.isAuthenticated()) {
+            console.log('Cannot sync: Drive not available');
+            return;
+        }
+        
+        try {
+            const driveData = await window.driveSync.fetchAllData();
+            
+            if (driveData.tables && driveData.tables.length > 0) {
+                this.tables = driveData.tables;
+            }
+            
+            if (driveData.menu && driveData.menu.length > 0) {
+                this.menuItems = driveData.menu;
+            }
+            
+            if (driveData.orders && driveData.orders.length > 0) {
+                this.orders = driveData.orders;
+            }
+            
+            this.saveToLocalStorage();
+            console.log('Synced data from Google Drive');
+            
+            return true;
+        } catch (error) {
+            console.error('Error syncing from Drive:', error);
+            return false;
+        }
+    }
+    
+    // Initialize app
+    initialize() {
+        this.loadFromLocalStorage();
+        
+        // Try to sync from Drive if authenticated
+        if (window.googleAuth && window.googleAuth.isAuthenticated()) {
+            this.syncFromDrive().then(success => {
+                if (success && window.appUI) {
+                    window.appUI.refreshAll();
+                }
+            });
+        }
+    }
+}
+
+// Initialize data manager
+document.addEventListener('DOMContentLoaded', () => {
+    window.dataManager = new DataManager();
+});
