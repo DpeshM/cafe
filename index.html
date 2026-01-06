@@ -4,374 +4,199 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Restaurant POS System</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://apis.google.com/js/api.js"></script>
 </head>
 <body>
-    <!-- Loading Screen -->
-    <div class="loading-overlay" id="loadingScreen">
-        <div class="spinner"></div>
-        <div class="loading-text">Loading Restaurant POS...</div>
-    </div>
-    
-    <div class="setup-wizard hidden" id="setupWizard">
-        <div class="wizard-content">
-            <h2 class="wizard-title">Quick Setup</h2>
-            <p class="wizard-subtitle">Choose how to connect to Google Sheets</p>
-            
-            <div class="setup-step">
-                <h3><span class="step-number">1</span> Select method</h3>
-                <label class="setup-option">
-                    <input type="radio" name="wizardMethod" id="wizardOptionScript" checked>
-                    <div>
-                        <div><strong>Google Apps Script Web App URL</strong></div>
-                        <div>Recommended. No API key required. Deploy Apps Script as Web App and paste its URL.</div>
-                    </div>
-                </label>
-                <label class="setup-option">
-                    <input type="radio" name="wizardMethod" id="wizardOptionApi">
-                    <div>
-                        <div><strong>Google Sheets API Key</strong></div>
-                        <div>Use a public API key. Ensure your sheet is readable via API.</div>
-                    </div>
-                </label>
-            </div>
-            
-            <button class="btn-primary" id="wizardContinueBtn">Continue</button>
-            <button class="btn-secondary" id="wizardCancelBtn">Cancel</button>
-            
-            <div class="info-box">
-                <p>Tip: Sheet ID is in the URL: <code>docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit</code></p>
-            </div>
+    <!-- Auth Modal -->
+    <div id="authModal" class="modal">
+        <div class="modal-content">
+            <h2>POS System Login</h2>
+            <p>Connect to Google Drive to sync your data</p>
+            <button id="signInButton" class="btn btn-primary">
+                <i class="fab fa-google"></i> Sign in with Google
+            </button>
+            <div id="authStatus" class="auth-status"></div>
         </div>
     </div>
-    
-    <!-- Header Navigation -->
-    <header>
-        <div class="container nav-container app-header">
-            <div class="nav-tabs">
-                <button class="nav-tab active" data-tab="waiter">
-                    <i class="fas fa-shopping-cart"></i>
-                    <span>Waiter</span>
-                </button>
-                <button class="nav-tab" data-tab="kitchen">
-                    <i class="fas fa-utensils"></i>
-                    <span>Kitchen</span>
-                </button>
-                <button class="nav-tab" data-tab="checkout">
-                    <i class="fas fa-cash-register"></i>
-                    <span>Checkout</span>
-                </button>
-                <button class="nav-tab" data-tab="expenses">
-                    <i class="fas fa-minus-circle"></i>
-                    <span>Expenses</span>
-                </button>
-                <button class="nav-tab" data-tab="reports">
-                    <i class="fas fa-chart-bar"></i>
-                    <span>Reports</span>
-                </button>
-            </div>
-            <div class="nav-actions">
-                <div class="sync-status hidden" id="syncStatus"></div>
-                <button class="nav-btn" id="syncBtn">
-                    <i class="fas fa-sync" id="syncIcon"></i>
-                    <span id="syncBtnText">Sync Now</span>
-                </button>
-                <button class="nav-btn" id="settingsBtn">
-                    <i class="fas fa-cog"></i>
-                    <span>Settings</span>
-                </button>
-                <button class="nav-btn" id="downloadBtn">
-                    <i class="fas fa-download"></i>
-                    <span>Download</span>
-                </button>
-            </div>
-        </div>
-    </header>
-    
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="container">
-            <!-- Hero Section -->
-            <div class="hero-section">
-                <h1 class="hero-title">Restaurant POS System</h1>
-                <p class="hero-subtitle">Google Sheets Integrated - All data is automatically saved to and loaded from your Google Sheet</p>
-            </div>
-            
-            <!-- Waiter Tab -->
-            <div class="tab-content active" id="waiterTab">
-                <h2 class="section-title">
-                    <i class="fas fa-shopping-cart"></i>
-                    Table Selection
-                </h2>
-                <div class="tables-grid" id="tablesGrid">
-                    <!-- Tables will be rendered here -->
-                </div>
-                
-                <div id="orderSection" class="hidden">
-                    <h2 class="section-title">
-                        <i class="fas fa-list"></i>
-                        Order for Table <span id="selectedTableNumber"></span>
-                    </h2>
-                    
-                    <div class="order-section">
-                        <div>
-                            <h3 class="category-title mb-3">Menu Items</h3>
-                            <div id="menuGrid">
-                                <!-- Menu items will be rendered here -->
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <div class="order-items" id="currentOrderItems">
-                                <!-- Current order items will be rendered here -->
-                            </div>
-                            
-                            <div class="order-summary">
-                                <div class="summary-row">
-                                    <span>Subtotal:</span>
-                                    <span id="orderSubtotal">Rs.0.00</span>
-                                </div>
-                                <div class="summary-row">
-                                    <span>Tax (13%):</span>
-                                    <span id="orderTax">Rs.0.00</span>
-                                </div>
-                                <div class="summary-row summary-total">
-                                    <span>Total:</span>
-                                    <span id="orderTotal">Rs.0.00</span>
-                                </div>
-                                
-                                <button class="action-btn btn-secondary" id="clearOrderBtn">
-                                    Clear Order
-                                </button>
-                                <button class="action-btn btn-primary" id="submitOrderBtn">
-                                    Submit to Kitchen
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+
+    <!-- Main App (hidden until authenticated) -->
+    <div id="appContainer" class="app-container" style="display: none;">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <h1><i class="fas fa-utensils"></i> Restaurant POS</h1>
+                <div id="syncStatus" class="sync-status">
+                    <i class="fas fa-check-circle"></i> Synced
                 </div>
             </div>
-            
-            <!-- Kitchen Tab -->
-            <div class="tab-content" id="kitchenTab">
-                <h2 class="section-title">
-                    <i class="fas fa-utensils"></i>
-                    Kitchen Orders
-                </h2>
-                <div class="orders-list" id="kitchenOrdersList">
-                    <!-- Kitchen orders will be rendered here -->
-                </div>
+            <div class="header-right">
+                <button id="refreshData" class="btn btn-secondary">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                <button id="signOutButton" class="btn btn-secondary">
+                    <i class="fas fa-sign-out-alt"></i> Sign Out
+                </button>
             </div>
-            
-            <!-- Checkout Tab -->
-            <div class="tab-content" id="checkoutTab">
-                <h2 class="section-title">
-                    <i class="fas fa-cash-register"></i>
-                    Checkout
-                </h2>
-                <div id="checkoutContent">
-                    <!-- Checkout content will be rendered here -->
-                </div>
-            </div>
-            
-            <!-- Expenses Tab -->
-            <div class="tab-content" id="expensesTab">
-                <h2 class="section-title">
-                    <i class="fas fa-minus-circle"></i>
-                    Expenses Management
-                </h2>
-                <div class="text-center mb-4">
-                    <button class="nav-btn" id="addExpenseBtn">
-                        <i class="fas fa-plus"></i>
-                        <span>Add Expense</span>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Left Panel: Tables -->
+            <section class="panel tables-panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-chair"></i> Tables</h2>
+                    <button id="addTableBtn" class="btn btn-primary btn-small">
+                        <i class="fas fa-plus"></i> Add Table
                     </button>
                 </div>
-                <div id="expensesList">
-                    <!-- Expenses will be rendered here -->
+                <div id="tablesList" class="tables-grid">
+                    <!-- Tables will be dynamically loaded here -->
                 </div>
-            </div>
-            
-            <!-- Reports Tab -->
-            <div class="tab-content" id="reportsTab">
-                <h2 class="section-title">
-                    <i class="fas fa-chart-bar"></i>
-                    Reports & Analytics
-                </h2>
-                <div class="reports-grid">
-                    <div class="report-card">
-                        <h3 class="category-title">Sales Summary</h3>
-                        <div id="salesSummary">
-                            <!-- Sales summary will be rendered here -->
-                        </div>
-                    </div>
-                    <div class="report-card">
-                        <h3 class="category-title">Recent Transactions</h3>
-                        <div id="recentTransactions">
-                            <!-- Recent transactions will be rendered here -->
-                        </div>
-                    </div>
-                    <div class="report-card">
-                        <h3 class="category-title">Expenses Summary</h3>
-                        <div id="expensesSummary">
-                            <!-- Expenses summary will be rendered here -->
-                        </div>
+            </section>
+
+            <!-- Middle Panel: Menu -->
+            <section class="panel menu-panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-book"></i> Menu</h2>
+                    <div class="menu-controls">
+                        <select id="categoryFilter" class="filter-select">
+                            <option value="all">All Categories</option>
+                            <option value="food">Food</option>
+                            <option value="beverage">Beverage</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                        <button id="addMenuItemBtn" class="btn btn-primary btn-small">
+                            <i class="fas fa-plus"></i> Add Item
+                        </button>
                     </div>
                 </div>
-            </div>
-        </div>
-    </main>
-    
-    <!-- Settings Modal -->
-    <div class="settings-section active" id="setupSettings">
-    <h3 class="category-title mb-3">Google Apps Script Setup</h3>
-    
-    <div class="alert alert-info mb-4">
-        <i class="fas fa-info-circle"></i>
-        <strong>No API Key Needed! Follow these steps:</strong>
-        <ol class="mt-2">
-            <li>Create a Google Sheet</li>
-            <li>Copy the Sheet ID from URL</li>
-            <li>Create Google Apps Script (code provided)</li>
-            <li>Deploy as Web App (Anyone can access)</li>
-            <li>Paste the Web App URL below</li>
-        </ol>
-    </div>
-    
-    <div class="form-group">
-        <label class="form-label">Google Sheet ID</label>
-        <input type="text" class="form-input" id="sheetId" placeholder="Enter your Google Sheet ID">
-        <small class="form-help">From URL: docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit</small>
-    </div>
-    
-    <div class="form-group">
-        <label class="form-label">Google Apps Script URL</label>
-        <input type="text" class="form-input" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec">
-        <small class="form-help">Get this from Apps Script deployment</small>
-    </div>
-    
-    <div class="text-center">
-        <button class="action-btn btn-primary" id="testConnectionBtn">
-            <i class="fas fa-plug"></i>
-            Test Connection
-        </button>
-        <button class="action-btn btn-success" id="saveSettingsBtn">
-            <i class="fas fa-save"></i>
-            Save Settings
-        </button>
-    </div>
-</div>
-    
-    <!-- Add Expense Modal -->
-    <div class="modal-overlay" id="expenseModal">
-        <div class="modal" style="max-width: 500px;">
-            <div class="modal-header">
-                <h2 class="modal-title">Add Expense</h2>
-                <button class="modal-close" id="closeExpenseBtn">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-content">
-                <div class="form-group">
-                    <label class="form-label">Description</label>
-                    <input type="text" class="form-input" id="expenseDescription" placeholder="What was the expense for?">
+                <div class="search-box">
+                    <input type="text" id="menuSearch" placeholder="Search menu items...">
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Amount (Rs.)</label>
-                    <input type="number" min="0" step="0.01" class="form-input" id="expenseAmount" placeholder="0.00">
+                <div id="menuItems" class="menu-grid">
+                    <!-- Menu items will be dynamically loaded here -->
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Category</label>
-                    <select class="form-input" id="expenseCategory">
-                        <option value="Food Supplies">Food Supplies</option>
-                        <option value="Utilities">Utilities</option>
-                        <option value="Staff">Staff</option>
-                        <option value="Maintenance">Maintenance</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                <button class="action-btn btn-primary" id="saveExpenseBtn">Add Expense</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Add Menu Item Modal -->
-    <div class="modal-overlay" id="menuItemModal">
-        <div class="modal" style="max-width: 500px;">
-            <div class="modal-header">
-                <h2 class="modal-title" id="menuItemModalTitle">Add Menu Item</h2>
-                <button class="modal-close" id="closeMenuItemBtn">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-content">
-                <div class="form-group">
-                    <label class="form-label">Item Name</label>
-                    <input type="text" class="form-input" id="menuItemName" placeholder="Enter item name">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Price (Rs.)</label>
-                    <input type="number" min="0" step="0.01" class="form-input" id="menuItemPrice" placeholder="0.00">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Category</label>
-                    <select class="form-input" id="menuItemCategory">
-                        <option value="Main">Main</option>
-                        <option value="Starter">Starter</option>
-                        <option value="Side">Side</option>
-                        <option value="Drink">Drink</option>
-                        <option value="Dessert">Dessert</option>
-                    </select>
-                </div>
-                <button class="action-btn btn-primary" id="saveMenuItemBtn">Save Item</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Payment Modal -->
-    <div class="modal-overlay" id="paymentModal">
-        <div class="modal" style="max-width: 500px;">
-            <div class="modal-header">
-                <h2 class="modal-title">Process Payment</h2>
-                <button class="modal-close" id="closePaymentBtn">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-content">
-                <div class="form-group">
-                    <label class="form-label">Payment Method</label>
-                    <select class="form-input" id="paymentMethod">
-                        <option value="">Select Payment Method</option>
-                        <option value="Cash">Cash Only</option>
-                        <option value="QR">QR Only</option>
-                        <option value="Both">Both (Split Payment)</option>
-                    </select>
+            </section>
+
+            <!-- Right Panel: Current Order -->
+            <section class="panel order-panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-receipt"></i> Current Order</h2>
+                    <div id="selectedTableInfo" class="selected-table">
+                        No table selected
+                    </div>
                 </div>
                 
-                <div id="cashSection" class="hidden">
+                <div class="order-details">
+                    <div class="order-items">
+                        <div id="orderItemsList" class="order-items-list">
+                            <!-- Order items will appear here -->
+                            <div class="empty-order">
+                                <i class="fas fa-shopping-cart"></i>
+                                <p>Select a table and add items</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="order-summary">
+                        <div class="summary-row">
+                            <span>Subtotal:</span>
+                            <span id="subtotal">$0.00</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Tax (10%):</span>
+                            <span id="tax">$0.00</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>Total:</span>
+                            <span id="total">$0.00</span>
+                        </div>
+                        
+                        <div class="order-actions">
+                            <button id="clearOrderBtn" class="btn btn-secondary" disabled>
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                            <button id="closeOrderBtn" class="btn btn-success" disabled>
+                                <i class="fas fa-check"></i> Close Order
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Modals -->
+        <div id="tableModal" class="modal">
+            <div class="modal-content">
+                <h3 id="tableModalTitle">Add New Table</h3>
+                <form id="tableForm">
                     <div class="form-group">
-                        <label class="form-label">Cash Amount (Rs.)</label>
-                        <input type="number" min="0" step="0.01" class="form-input" id="cashAmount" placeholder="0.00">
+                        <label for="tableName">Table Name/Number:</label>
+                        <input type="text" id="tableName" required placeholder="e.g., Table 1, Booth A">
                     </div>
-                </div>
-                
-                <div id="qrSection" class="hidden">
                     <div class="form-group">
-                        <label class="form-label">QR Amount (Rs.)</label>
-                        <input type="number" min="0" step="0.01" class="form-input" id="qrAmount" placeholder="0.00">
+                        <label for="tableCapacity">Capacity:</label>
+                        <input type="number" id="tableCapacity" min="1" max="20" value="4">
                     </div>
+                    <div class="modal-actions">
+                        <button type="button" id="cancelTableBtn" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Table</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="menuModal" class="modal">
+            <div class="modal-content">
+                <h3 id="menuModalTitle">Add Menu Item</h3>
+                <form id="menuForm">
+                    <div class="form-group">
+                        <label for="itemName">Item Name:</label>
+                        <input type="text" id="itemName" required placeholder="e.g., Chicken Burger">
+                    </div>
+                    <div class="form-group">
+                        <label for="itemCategory">Category:</label>
+                        <select id="itemCategory" required>
+                            <option value="food">Food</option>
+                            <option value="beverage">Beverage</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="itemPrice">Price ($):</label>
+                        <input type="number" id="itemPrice" min="0" step="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="itemDescription">Description (optional):</label>
+                        <textarea id="itemDescription" rows="3" placeholder="Item description..."></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" id="cancelMenuBtn" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Item</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div id="confirmModal" class="modal">
+            <div class="modal-content">
+                <h3 id="confirmTitle">Confirm Action</h3>
+                <p id="confirmMessage">Are you sure you want to proceed?</p>
+                <div class="modal-actions">
+                    <button id="confirmCancel" class="btn btn-secondary">Cancel</button>
+                    <button id="confirmAction" class="btn btn-danger">Confirm</button>
                 </div>
-                
-                <div class="summary-row mb-3">
-                    <span>Total Due:</span>
-                    <span id="paymentTotal">Rs.0.00</span>
-                </div>
-                
-                <button class="action-btn btn-primary" id="processPaymentBtn">Process Payment</button>
             </div>
         </div>
     </div>
-    
-    <script src="script.js"></script>
+
+    <!-- Scripts -->
+    <script src="auth.js"></script>
+    <script src="drive-sync.js"></script>
+    <script src="data-manager.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
