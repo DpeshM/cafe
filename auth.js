@@ -1,8 +1,8 @@
 // Google OAuth Configuration and Authentication
 class GoogleAuth {
     constructor() {
-        this.CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com'; // Replace with your actual Client ID
-        this.API_KEY = 'YOUR_API_KEY'; // Replace with your actual API Key
+        this.CLIENT_ID = '487976344571-q71d1tl69lqv3ckg4je6s7sbrjrid97p.apps.googleusercontent.com'; // Replace with your actual Client ID
+        this.API_KEY = 'AIzaSyC106AewYLjiJ20vunHUmzaLnUxLtDzyCA'; // Replace with your actual API Key
         this.DISCOVERY_DOCS = [
             'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
             'https://sheets.googleapis.com/$discovery/rest?version=v4'
