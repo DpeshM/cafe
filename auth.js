@@ -3,7 +3,7 @@ class GoogleAuth {
     constructor() {
         // IMPORTANT: Replace these with your actual credentials
         this.CLIENT_ID = '487976344571-q71d1tl69lqv3ckg4je6s7sbrjrid97p.apps.googleusercontent.com';
-        this.API_KEY = 'AIzaSyC106AewYLjiJ20vunHUmzaLnUxLtDzyCA';
+        this.API_KEY = 'AIzaSyCprevhGqEJDwCULEndxgIFqZ8WIbruTqA';
         this.SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets';
         
         this.tokenClient = null;
