@@ -6,11 +6,10 @@
     <title>Restaurant POS System</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://apis.google.com/js/api.js"></script>
 </head>
 <body>
     <!-- Auth Modal -->
-    <div id="authModal" class="modal">
+    <div id="authModal" class="modal active">
         <div class="modal-content">
             <h2>POS System Login</h2>
             <p>Connect to Google Drive to sync your data</p>
@@ -18,185 +17,32 @@
                 <i class="fab fa-google"></i> Sign in with Google
             </button>
             <div id="authStatus" class="auth-status"></div>
+            <div id="debugInfo" style="margin-top: 20px; font-size: 12px; color: #666;"></div>
         </div>
     </div>
 
     <!-- Main App (hidden until authenticated) -->
     <div id="appContainer" class="app-container" style="display: none;">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="header-left">
-                <h1><i class="fas fa-utensils"></i> Restaurant POS</h1>
-                <div id="syncStatus" class="sync-status">
-                    <i class="fas fa-check-circle"></i> Synced
-                </div>
-            </div>
-            <div class="header-right">
-                <button id="refreshData" class="btn btn-secondary">
-                    <i class="fas fa-sync-alt"></i> Refresh
-                </button>
-                <button id="signOutButton" class="btn btn-secondary">
-                    <i class="fas fa-sign-out-alt"></i> Sign Out
-                </button>
-            </div>
-        </header>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Left Panel: Tables -->
-            <section class="panel tables-panel">
-                <div class="panel-header">
-                    <h2><i class="fas fa-chair"></i> Tables</h2>
-                    <button id="addTableBtn" class="btn btn-primary btn-small">
-                        <i class="fas fa-plus"></i> Add Table
-                    </button>
-                </div>
-                <div id="tablesList" class="tables-grid">
-                    <!-- Tables will be dynamically loaded here -->
-                </div>
-            </section>
-
-            <!-- Middle Panel: Menu -->
-            <section class="panel menu-panel">
-                <div class="panel-header">
-                    <h2><i class="fas fa-book"></i> Menu</h2>
-                    <div class="menu-controls">
-                        <select id="categoryFilter" class="filter-select">
-                            <option value="all">All Categories</option>
-                            <option value="food">Food</option>
-                            <option value="beverage">Beverage</option>
-                            <option value="custom">Custom</option>
-                        </select>
-                        <button id="addMenuItemBtn" class="btn btn-primary btn-small">
-                            <i class="fas fa-plus"></i> Add Item
-                        </button>
-                    </div>
-                </div>
-                <div class="search-box">
-                    <input type="text" id="menuSearch" placeholder="Search menu items...">
-                </div>
-                <div id="menuItems" class="menu-grid">
-                    <!-- Menu items will be dynamically loaded here -->
-                </div>
-            </section>
-
-            <!-- Right Panel: Current Order -->
-            <section class="panel order-panel">
-                <div class="panel-header">
-                    <h2><i class="fas fa-receipt"></i> Current Order</h2>
-                    <div id="selectedTableInfo" class="selected-table">
-                        No table selected
-                    </div>
-                </div>
-                
-                <div class="order-details">
-                    <div class="order-items">
-                        <div id="orderItemsList" class="order-items-list">
-                            <!-- Order items will appear here -->
-                            <div class="empty-order">
-                                <i class="fas fa-shopping-cart"></i>
-                                <p>Select a table and add items</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="order-summary">
-                        <div class="summary-row">
-                            <span>Subtotal:</span>
-                            <span id="subtotal">$0.00</span>
-                        </div>
-                        <div class="summary-row">
-                            <span>Tax (10%):</span>
-                            <span id="tax">$0.00</span>
-                        </div>
-                        <div class="summary-row total">
-                            <span>Total:</span>
-                            <span id="total">$0.00</span>
-                        </div>
-                        
-                        <div class="order-actions">
-                            <button id="clearOrderBtn" class="btn btn-secondary" disabled>
-                                <i class="fas fa-times"></i> Clear
-                            </button>
-                            <button id="closeOrderBtn" class="btn btn-success" disabled>
-                                <i class="fas fa-check"></i> Close Order
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
-
-        <!-- Modals -->
-        <div id="tableModal" class="modal">
-            <div class="modal-content">
-                <h3 id="tableModalTitle">Add New Table</h3>
-                <form id="tableForm">
-                    <div class="form-group">
-                        <label for="tableName">Table Name/Number:</label>
-                        <input type="text" id="tableName" required placeholder="e.g., Table 1, Booth A">
-                    </div>
-                    <div class="form-group">
-                        <label for="tableCapacity">Capacity:</label>
-                        <input type="number" id="tableCapacity" min="1" max="20" value="4">
-                    </div>
-                    <div class="modal-actions">
-                        <button type="button" id="cancelTableBtn" class="btn btn-secondary">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Table</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <div id="menuModal" class="modal">
-            <div class="modal-content">
-                <h3 id="menuModalTitle">Add Menu Item</h3>
-                <form id="menuForm">
-                    <div class="form-group">
-                        <label for="itemName">Item Name:</label>
-                        <input type="text" id="itemName" required placeholder="e.g., Chicken Burger">
-                    </div>
-                    <div class="form-group">
-                        <label for="itemCategory">Category:</label>
-                        <select id="itemCategory" required>
-                            <option value="food">Food</option>
-                            <option value="beverage">Beverage</option>
-                            <option value="custom">Custom</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="itemPrice">Price ($):</label>
-                        <input type="number" id="itemPrice" min="0" step="0.01" required placeholder="0.00">
-                    </div>
-                    <div class="form-group">
-                        <label for="itemDescription">Description (optional):</label>
-                        <textarea id="itemDescription" rows="3" placeholder="Item description..."></textarea>
-                    </div>
-                    <div class="modal-actions">
-                        <button type="button" id="cancelMenuBtn" class="btn btn-secondary">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Item</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Confirmation Modal -->
-        <div id="confirmModal" class="modal">
-            <div class="modal-content">
-                <h3 id="confirmTitle">Confirm Action</h3>
-                <p id="confirmMessage">Are you sure you want to proceed?</p>
-                <div class="modal-actions">
-                    <button id="confirmCancel" class="btn btn-secondary">Cancel</button>
-                    <button id="confirmAction" class="btn btn-danger">Confirm</button>
-                </div>
-            </div>
-        </div>
+        <!-- ... rest of your app container ... -->
     </div>
 
-    <!-- Scripts -->
+    <!-- Load Google APIs -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    
+    <!-- Load our scripts -->
     <script src="auth.js"></script>
     <script src="drive-sync.js"></script>
     <script src="data-manager.js"></script>
     <script src="app.js"></script>
+    
+    <!-- Initialize debug -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded');
+            document.getElementById('debugInfo').innerHTML = 
+                'Scripts loaded. Check console for details.';
+        });
+    </script>
 </body>
 </html>
