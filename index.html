@@ -7,25 +7,25 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=DM+Sans:wght@300;400;500;600&family=Noto+Sans+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
 <style>
   :root {
-    --bg: #1a1208;
-    --surface: #231a0e;
-    --surface2: #2e2010;
-    --surface3: #3a2a14;
-    --border: #4a3420;
-    --accent: #d4862a;
-    --accent2: #e8a84a;
-    --accent-soft: rgba(212,134,42,0.12);
-    --green: #4caf7d;
-    --green-soft: rgba(76,175,125,0.12);
-    --red: #e05050;
-    --red-soft: rgba(224,80,80,0.12);
-    --blue: #4a90d9;
-    --blue-soft: rgba(74,144,217,0.12);
-    --text: #f0e8d8;
-    --text2: #b8a888;
-    --text3: #7a6848;
+    --bg: #f5f5f5;
+    --surface: #ffffff;
+    --surface2: #f0f0f0;
+    --surface3: #e8e8e8;
+    --border: #d8d8d8;
+    --accent: #c07020;
+    --accent2: #b05a00;
+    --accent-soft: rgba(192,112,32,0.10);
+    --green: #2e9e60;
+    --green-soft: rgba(46,158,96,0.10);
+    --red: #d03030;
+    --red-soft: rgba(208,48,48,0.10);
+    --blue: #2a70c0;
+    --blue-soft: rgba(42,112,192,0.10);
+    --text: #1a1a1a;
+    --text2: #555555;
+    --text3: #888888;
     --radius: 12px;
-    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    --shadow: 0 4px 24px rgba(0,0,0,0.10);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
@@ -279,6 +279,92 @@
   .mt-2 { margin-top: 8px; }
   .mb-2 { margin-bottom: 8px; }
   .w-full { width: 100%; }
+
+  /* ══ HAMBURGER ══ */
+  .hamburger { display:none; flex-direction:column; justify-content:center; gap:5px; width:36px; height:36px; cursor:pointer; padding:4px; background:none; border:none; }
+  .hamburger span { display:block; height:2px; background:var(--text); border-radius:2px; transition:all .3s; }
+  .hamburger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+  .hamburger.open span:nth-child(2) { opacity:0; }
+  .hamburger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+  .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:90; }
+  .sidebar-overlay.open { display:block; }
+  .bottom-nav { display:none; position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--border); z-index:80; height:60px; }
+  .bottom-nav-item { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; font-size:10px; color:var(--text3); transition:color .2s; padding:6px 2px; position:relative; }
+  .bottom-nav-item .bn-icon { font-size:20px; }
+  .bottom-nav-item.active { color:var(--accent); }
+  .bottom-nav-item .bn-badge { position:absolute; top:4px; right:calc(50% - 20px); background:var(--red); color:#fff; font-size:9px; padding:1px 5px; border-radius:8px; font-weight:700; }
+
+  /* ══ TABLET ≤1024px ══ */
+  @media(max-width:1024px){
+    .stats-grid{grid-template-columns:repeat(2,1fr);}
+    .dashboard-grid{grid-template-columns:1fr;}
+    .floor-grid{grid-template-columns:repeat(4,1fr);}
+    .kds-grid{grid-template-columns:repeat(2,1fr);}
+    .menu-items-grid{grid-template-columns:repeat(2,1fr);}
+    .reports-grid{grid-template-columns:1fr;}
+    .take-order-layout{grid-template-columns:1fr;}
+    .menu-select-grid{grid-template-columns:repeat(4,1fr);}
+    .settings-grid{grid-template-columns:1fr;}
+    .settings-nav{flex-direction:row;flex-wrap:wrap;margin-bottom:12px;}
+    .sidebar{width:200px;min-width:200px;}
+  }
+
+  /* ══ MOBILE ≤768px ══ */
+  @media(max-width:768px){
+    .topbar{padding:0 16px;}
+    .brand-sub{display:none;}
+    .hamburger{display:flex;}
+    .sidebar{position:fixed;top:60px;left:-240px;bottom:0;width:240px;min-width:240px;z-index:95;transition:left .3s;overflow-y:auto;box-shadow:var(--shadow);}
+    .sidebar.open{left:0;}
+    .bottom-nav{display:flex;}
+    .main{padding-bottom:60px;}
+    .page{padding:16px;}
+    .page-header{flex-direction:column;align-items:flex-start;gap:12px;}
+    .stats-grid{grid-template-columns:1fr 1fr;gap:10px;}
+    .floor-grid{grid-template-columns:repeat(3,1fr);gap:10px;}
+    .kds-grid{grid-template-columns:1fr;}
+    .menu-items-grid{grid-template-columns:repeat(2,1fr);gap:10px;}
+    .menu-select-grid{grid-template-columns:repeat(3,1fr);gap:8px;}
+    .reports-grid{grid-template-columns:1fr;}
+    .take-order-layout{grid-template-columns:1fr;}
+    .dashboard-grid{grid-template-columns:1fr;}
+    .settings-grid{grid-template-columns:1fr;}
+    .settings-nav{flex-direction:row;flex-wrap:wrap;gap:4px;}
+    .form-row{grid-template-columns:1fr;}
+    .modal{padding:20px;}
+    .table-wrap{overflow-x:auto;}
+    table{min-width:580px;}
+    .order-tabs{width:100%;overflow-x:auto;}
+    .order-tab{padding:8px 14px;font-size:12px;}
+    .card-value{font-size:24px;}
+    .order-panel-items{max-height:220px;}
+    .toast-area{bottom:70px;right:12px;left:12px;}
+    .toast{min-width:unset;width:100%;}
+    .floor-table{padding:10px 6px;}
+    .floor-table .tnum{font-size:18px;}
+    .menu-select-item{padding:10px 6px;}
+    .menu-select-item .emoji{font-size:22px;}
+    .menu-select-item .sname{font-size:11px;}
+  }
+
+  /* ══ SMALL MOBILE ≤480px ══ */
+  @media(max-width:480px){
+    .stats-grid{grid-template-columns:1fr 1fr;gap:8px;}
+    .floor-grid{grid-template-columns:repeat(3,1fr);gap:8px;}
+    .menu-items-grid{grid-template-columns:1fr;}
+    .menu-select-grid{grid-template-columns:repeat(2,1fr);}
+    .page-title{font-size:20px;}
+    .card{padding:14px;}
+    .card-value{font-size:20px;}
+    .brand-name{font-size:17px;}
+  }
+
+  /* ══ LARGE DESKTOP ≥1400px ══ */
+  @media(min-width:1400px){
+    .kds-grid{grid-template-columns:repeat(4,1fr);}
+    .menu-items-grid{grid-template-columns:repeat(4,1fr);}
+    .menu-select-grid{grid-template-columns:repeat(5,1fr);}
+  }
 </style>
 </head>
 <body>
@@ -286,6 +372,9 @@
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="brand">
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">
+      <span></span><span></span><span></span>
+    </button>
     <div class="brand-logo">☕</div>
     <div>
       <div class="brand-name">Chiya Path</div>
@@ -295,9 +384,10 @@
   <div class="topbar-time">
     <div class="live-dot"></div>
     <span id="clock">—</span>
-    &nbsp;|&nbsp; Manager View
+    <span>&nbsp;|&nbsp; Manager View</span>
   </div>
 </div>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
 <!-- APP -->
 <div class="app">
@@ -1195,10 +1285,60 @@ function toast(msg, type='success') {
   setTimeout(()=>t.remove(), 3500);
 }
 
+
+// ══════════════════════════════════════
+//  RESPONSIVE — SIDEBAR & BOTTOM NAV
+// ══════════════════════════════════════
+function toggleSidebar() {
+  const sb = document.querySelector('.sidebar');
+  const ov = document.getElementById('sidebar-overlay');
+  const hb = document.getElementById('hamburger');
+  sb.classList.toggle('open');
+  ov.classList.toggle('open');
+  hb.classList.toggle('open');
+}
+function closeSidebar() {
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+  document.getElementById('hamburger').classList.remove('open');
+}
+function setBottomNav(page) {
+  document.querySelectorAll('.bottom-nav-item').forEach(i=>i.classList.remove('active'));
+  const el = document.getElementById('bn-'+page);
+  if(el) el.classList.add('active');
+}
+// Close sidebar on nav click on mobile
+const origNavigate = navigate;
+window.navigate = function(page) {
+  origNavigate(page);
+  closeSidebar();
+  setBottomNav(page);
+  document.getElementById('bn-kds-badge').textContent = orders.filter(o=>['new','preparing','ready'].includes(o.status)).length;
+};
 // ══════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════
 renderDashboard();
 </script>
+
+<!-- BOTTOM NAV (mobile) -->
+<nav class="bottom-nav">
+  <div class="bottom-nav-item active" id="bn-dashboard" onclick="navigate('dashboard');setBottomNav('dashboard')">
+    <div class="bn-icon">🏠</div><div>Home</div>
+  </div>
+  <div class="bottom-nav-item" id="bn-takeorder" onclick="navigate('takeorder');setBottomNav('takeorder')" style="position:relative">
+    <div class="bn-icon">📝</div><div>Order</div>
+  </div>
+  <div class="bottom-nav-item" id="bn-kitchen" onclick="navigate('kitchen');setBottomNav('kitchen')" style="position:relative">
+    <div class="bn-icon">👨‍🍳</div><div>Kitchen</div>
+    <span class="bn-badge" id="bn-kds-badge">4</span>
+  </div>
+  <div class="bottom-nav-item" id="bn-tables" onclick="navigate('tables');setBottomNav('tables')">
+    <div class="bn-icon">🪑</div><div>Tables</div>
+  </div>
+  <div class="bottom-nav-item" id="bn-menu" onclick="navigate('menu');setBottomNav('menu')">
+    <div class="bn-icon">📋</div><div>Menu</div>
+  </div>
+</nav>
 </body>
 </html>
